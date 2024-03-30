@@ -3,17 +3,17 @@ from ultralytics import YOLO
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-
-#%% Make Snips
 import subprocess
 import os
 
-# Define the video source and the output video name
-video_source = "Assets/test.mp4"  # Change this to your video file path
+#%% Make Snips
+
+# Input and output folders
+video_source = "Assets/test.mp4"  
 output_video = "looped_video.mp4"
 
-# Calculate how many times to loop the video to get close to 1000 images
-loops_required = 94  # As your video is approximately 10 seconds long
+# Define 94 loops, needed to make 1000 frames out of 10 sec video
+loops_required = 94  
 
 # Create a text file with the filenames repeated
 concat_file = "concat_list.txt"
@@ -34,7 +34,7 @@ ffmpeg_loop_command = [
 
 subprocess.run(ffmpeg_loop_command)
 
-# Define the rate at which you want to extract frames (frames per second)
+# Output settings
 frames_per_second = 1
 output_folder = "extracted_frames"
 
@@ -64,7 +64,6 @@ model = YOLO('yolov8x-seg.pt')
 
 results = model(source='Assets/Baseline Images/1.jpg', show=False, conf=0.05, save=True, classes=2, save_txt=True, save_conf=True, line_width=1)
 
-# Assuming the results object has an attribute 'masks'
 if hasattr(results[0], 'masks') and results[0].masks is not None:
     # Prepare the text content
     mask_texts = []
@@ -82,7 +81,6 @@ else:
     print("No masks data found in the results.")
 
 #%% Segmenation of serverial images
-import os
 
 def process_images(model, image_dir, output_dir):
     # List all jpg files in the image directory
@@ -107,10 +105,10 @@ def process_images(model, image_dir, output_dir):
         else:
             print(f"No masks data found for {image_path}")
 
-# Initialize your model
+# model init
 model = YOLO('yolov8x-seg.pt')
 
-# Define your directories
+# Choose path's
 image_dir = 'Assets/Baseline Images'
 output_dir = 'Assets/Mask Outputs'
 
@@ -120,6 +118,7 @@ os.makedirs(output_dir, exist_ok=True)
 # Process the images
 process_images(model, image_dir, output_dir)
 #%% Count Cars - stream (change frame to live feed)
+
 model = YOLO('yolov8x.pt')
 
 #Total parking spots 
@@ -138,11 +137,10 @@ for r in results:
     # Calculate vacant parking spots
     vacant_spots = total_parking_spots - car_count
 
-    # Since we are not using OpenCV, we can print the count to the console
-    #print(f"Vacant Spots": {vacant_spots})
-
+ 
 
 #%% Draw Plots from masks for a single car
+    
 # Coordinates for the shape
 coordinates = np.array([
    [        519,         516],
