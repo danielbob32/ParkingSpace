@@ -260,4 +260,184 @@ plt.colorbar()
 plt.title("Probability Map of Car #1")
 plt.show()
 
+# %% Organize the masks files per car
+import os
+import re
+import numpy as np
+
+# Function to extract coordinates for all cars in the text
+def extract_all_car_coordinates(text):
+    car_coords_dict = {}
+    # Match each car's coordinates, expecting the format: "Car #1 Mask Coordinates:\n ... \n\n"
+    car_sections = re.split(r'(Car #\d+ Mask Coordinates:)', text)
+    for i in range(1, len(car_sections), 2):  # Increment by 2 to skip the actual coordinates and only get headers
+        car_number = car_sections[i].split()[1]  # Car number is the second word in the header
+        coords_text = car_sections[i+1].strip()
+        coords_list = extract_coordinates(coords_text)
+        if coords_list.size > 0:
+            if car_number not in car_coords_dict:
+                car_coords_dict[car_number] = []
+            car_coords_dict[car_number].append(coords_list)
+    return car_coords_dict
+
+# Function to extract coordinates from a string
+def extract_coordinates(coord_string):
+    coord_pairs = re.findall(r'\[\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]', coord_string)
+    return np.array(coord_pairs, dtype=float)
+
+# Path to the directory containing the mask files
+input_directory = 'Assets/Mask Outputs'
+output_directory = os.path.join(input_directory, 'Car_Mask_Files')
+
+# Create the output directory if it doesn't exist
+os.makedirs(output_directory, exist_ok=True)
+
+# Loop through each file and compile coordinates for each car
+for filename in sorted(os.listdir(input_directory)):
+    if filename.endswith('_masks.txt'):
+        filepath = os.path.join(input_directory, filename)
+        with open(filepath, 'r') as file:
+            text = file.read()
+            car_coords_dict = extract_all_car_coordinates(text)
+            for car_number, coords_list in car_coords_dict.items():
+                car_filepath = os.path.join(output_directory, f'car_{car_number}_masks.txt')
+                # Append coordinates to each car's file
+                with open(car_filepath, 'a') as car_file:
+                    for coords in coords_list:
+                        car_file.write(f'{coords.tolist()}\n')
+
+print("Completed processing all mask files.")
+
+# %% Plot the masks for all cars (makes distirbution on edges)
+import os
+import re
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Define the path to the directory containing the car mask files
+input_directory = 'Assets/Mask Outputs/Car_Mask_Files'
+
+# Initialize a grid for the probability map
+grid_size = (100, 100)  # Adjust the size of the grid as needed
+probability_grid = np.zeros(grid_size)
+
+# Function to process a single file and extract coordinates
+def process_file(filepath):
+    coords = []
+    with open(filepath, 'r') as f:
+        for line in f:
+            # Strip unwanted characters
+            line = line.strip().strip('[],\n')
+            if line:  # Check if line is not empty
+                # Find all floating-point numbers in the line
+                numbers = re.findall(r"[-+]?\d*\.\d+|\d+", line)
+                # We expect two numbers per line for x and y coordinates
+                if len(numbers) == 2:
+                    x, y = map(float, numbers)
+                    coords.append((x, y))
+    return coords
+
+# Process all files and accumulate the coordinate counts on the grid
+for filename in sorted(os.listdir(input_directory)):
+    if filename.endswith('_masks.txt'):
+        coords = process_file(os.path.join(input_directory, filename))
+        # Debug: Print sample coordinates from each file
+        print(f"{filename} sample coords: {coords[:5]}")
+        for x, y in coords:
+            grid_x = min(int(x * grid_size[0]), grid_size[0] - 1)
+            grid_y = min(int(y * grid_size[1]), grid_size[1] - 1)
+            probability_grid[grid_x, grid_y] += 1
+
+# Debug: Print max, min, and total counts
+print(f"Max count: {np.max(probability_grid)}, Min count: {np.min(probability_grid)}, Total count: {total_counts}")
+
+# Normalize the grid to get the probability map
+total_counts = np.sum(probability_grid)
+if total_counts > 0:  # Prevent division by zero
+    probability_grid /= total_counts
+
+# Plot the probability map
+plt.imshow(probability_grid, cmap='hot', interpolation='nearest')
+plt.colorbar()
+plt.title('Combined Probability Map for All Cars')
+plt.xlabel('X coordinate')
+plt.ylabel('Y coordinate')
+plt.gca().invert_yaxis()  # Inverting the y-axis so that origin is at the top-left
+plt.show()
+
+# %% Plot the masks for all cards v.2 (makes distirbution on edges also)
+import os
+import re
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
+
+# Define the path to the directory containing the car mask files
+input_directory = 'Assets/Mask Outputs/Car_Mask_Files'  # Replace with your directory path
+
+# Initialize a grid for the probability map
+grid_size = (100, 100)
+probability_grid = np.zeros(grid_size)
+
+# Function to process a single file and extract coordinates
+def process_file(filepath):
+    coords = []
+    with open(filepath, 'r') as f:
+        content = f.read()
+        # Look for all coordinate pairs within brackets
+        matches = re.findall(r'\[\s*(\d+(\.\d+)?),\s*(\d+(\.\d+)?)\s*\]', content)
+        for match in matches:
+            x, y = map(float, match[:2])
+            coords.append((x, y))
+    return coords
+
+# Collect all coordinates from all files
+all_coords = []
+for filename in sorted(os.listdir(input_directory)):
+    if filename.endswith('_masks.txt'):
+        file_path = os.path.join(input_directory, filename)
+        coords = process_file(file_path)
+        print(f"File: {filename}, Number of coordinates: {len(coords)}")  # Debugging output
+        all_coords.extend(coords)
+
+# Convert the collected coordinates to a NumPy array
+all_coords = np.array(all_coords)
+
+# Normalize the coordinates using standard score normalization
+if all_coords.size > 0:
+    mean_value = np.mean(all_coords, axis=0)
+    std_value = np.std(all_coords, axis=0) + 1e-8  # Add a small constant to prevent division by zero
+    all_coords = (all_coords - mean_value) / std_value
+# Increment the grid cells based on the coordinates
+for x, y in all_coords:
+    grid_x = min(int(x * (grid_size[0] - 1)), grid_size[0] - 1)
+    grid_y = min(int(y * (grid_size[1] - 1)), grid_size[1] - 1)
+    probability_grid[grid_y, grid_x] += 1  # Swap x and y here
+
+# Normalize the grid to convert counts to probabilities
+probability_grid /= np.sum(probability_grid)
+
+# Use logarithmic normalization to better visualize the data
+log_norm = LogNorm(vmin=probability_grid[probability_grid > 0].min(), vmax=probability_grid.max())
+
+# Plot the raw coordinates
+plt.figure(figsize=(10, 8))
+plt.scatter(all_coords[:, 0], all_coords[:, 1], alpha=0.1)
+plt.title('Scatter Plot of All Coordinates')
+plt.xlabel('Normalized X Coordinate')
+plt.ylabel('Normalized Y Coordinate')
+plt.grid(True)
+plt.show()
+
+# Save the probability grid to a text file
+np.savetxt('probability_grid.txt', probability_grid)
+
+# Plot the heatmap
+plt.figure(figsize=(10, 8))
+plt.imshow(probability_grid, cmap='hot', interpolation='nearest', norm=log_norm)
+plt.title('Heatmap of All Coordinates')
+plt.xlabel('Normalized X Coordinate')
+plt.ylabel('Normalized Y Coordinate')
+plt.colorbar(label='Log Probability')
+plt.show()
 # %%
