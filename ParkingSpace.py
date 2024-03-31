@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import subprocess
 import os
+import numpy as np
 
 #%% Make Snips
 
@@ -124,6 +125,8 @@ model = YOLO('yolov8x.pt')
 #Total parking spots 
 total_parking_spots = 48
 
+total_parking_spots = 10  # Replace '10' with the actual number of parking spots
+
 # Run inference on the source as a stream
 results = model(source='rtsp', stream=True, show=True, conf=0.15, classes=2, line_width=1)
 
@@ -140,7 +143,6 @@ for r in results:
  
 
 #%% Draw Plots from masks for a single car
-    
 # Coordinates for the shape
 coordinates = np.array([
    [        519,         516],
@@ -192,44 +194,70 @@ plt.ylabel("Y coordinate")
 plt.gca().set_aspect('equal', adjustable='box')
 plt.savefig('output_shape.png')
 
-#%% Create Probabilty map
-import torch
-import numpy as np
+#%% Creating prob map for a single car
+
 import os
 import re
+import numpy as np
+import matplotlib.pyplot as plt
 
-def create_probability_map(mask_dir, output_file, shape):
-    mask_files = [os.path.join(mask_dir, f) for f in os.listdir(mask_dir) if f.endswith('.txt')]
-    sum_masks = np.zeros(shape, dtype=float)
-    count = 0
+# Function to extract coordinates
+def extract_coordinates(text):
+    # Find all coordinate pairs in the text
+    coord_pairs = re.findall(r'\[\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]', text)
+    # Convert strings to floats and make a numpy array
+    coords_list = [tuple(map(float, pair)) for pair in coord_pairs]
+    return np.array(coords_list)
 
-    for mask_file in mask_files:
-        with open(mask_file, 'r') as f:
-            data = f.read()
+# Path to the directory containing the mask files
+directory = 'Assets/Mask Outputs'
 
-        # Extract tensor data using a regular expression
-        tensor_data = re.findall(r'data: tensor\((\[.*?\])\)', data, re.DOTALL)
-        if tensor_data:
-            for tensor_string in tensor_data:
-                # Convert string representation of tensor to an actual tensor
-                tensor = torch.tensor(eval(tensor_string))
-                # Convert tensor to numpy array and add to sum_masks
-                sum_masks += tensor.numpy()
+# Initialize an empty list to store coordinates
+all_coordinates = []
 
-        count += 1
+# Loop through each file in the directory
+for filename in os.listdir(directory):
+    if filename.endswith('_masks.txt'):
+        with open(os.path.join(directory, filename), 'r') as file:
+            text = file.read()
+            # Assuming the first car in each file is the one we're tracking
+            if 'Car #1 Mask Coordinates' in text:
+                index_start = text.find('Car #1 Mask Coordinates')
+                index_end = text.find('Car #2 Mask Coordinates', index_start)
+                car_text = text[index_start:index_end]
+                coords = extract_coordinates(car_text)
+                # Store the centroid of the car for simplicity
+                centroid = np.mean(coords, axis=0)
+                all_coordinates.append(centroid)
 
-    # Calculate the probability (average)
-    probability_map = sum_masks / count
+# Rest of the code for creating the grid and plotting remains the same
+all_coordinates = np.array(all_coordinates)
 
-    # Convert the probability map to a format suitable for saving as an image
-    probability_map_image = (probability_map * 255).astype(np.uint8)
-    
-    # Save the probability map
-    cv2.imwrite(output_file, probability_map_image)
+# Normalize coordinates to range [0, 1] if not already
+max_x = np.max(all_coordinates[:, 0])
+max_y = np.max(all_coordinates[:, 1])
+all_coordinates[:, 0] /= max_x
+all_coordinates[:, 1] /= max_y
 
-# Use the function
-mask_directory = 'Assets/Mask Outputs'  # Replace with your masks directory
-output_probability_map = 'probability_map.jpg'  # Output file path
-image_shape = (384, 640)  # Replace with the shape of your masks
-create_probability_map(mask_directory, output_probability_map, image_shape)
+# Define the grid size
+grid_size = (100, 100)  # for example, adjust as needed
+
+# Create a grid to accumulate counts
+grid = np.zeros(grid_size)
+
+# Iterate over each coordinate and increment the grid cells
+for x, y in all_coordinates:
+    grid_x = int(x * (grid_size[0] - 1))  # Scale to grid size
+    grid_y = int(y * (grid_size[1] - 1))  # Scale to grid size
+    grid[grid_x, grid_y] += 1
+
+# Normalize the grid to convert counts to probabilities
+probability_map = grid / len(all_coordinates)
+
+# Plot the probability map
+plt.imshow(probability_map, cmap='hot', interpolation='nearest')
+plt.colorbar()
+plt.title("Probability Map of Car #1")
+plt.show()
+
 # %%
