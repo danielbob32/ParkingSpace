@@ -200,6 +200,7 @@ import os
 import re
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 
 # Function to extract coordinates
 def extract_coordinates(text):
@@ -210,26 +211,25 @@ def extract_coordinates(text):
     return np.array(coords_list)
 
 # Path to the directory containing the mask files
-directory = 'Assets/Mask Outputs'
+directory = 'Assets/Mask Outputs/Car_Mask_Files_normalized'
 
 # Initialize an empty list to store coordinates
 all_coordinates = []
 
 # Loop through each file in the directory
 for filename in os.listdir(directory):
+    print(f"Processing file {filename}")  # Debugging line
     if filename.endswith('_masks.txt'):
         with open(os.path.join(directory, filename), 'r') as file:
-            text = file.read()
-            # Assuming the first car in each file is the one we're tracking
-            if 'Car #1 Mask Coordinates' in text:
-                index_start = text.find('Car #1 Mask Coordinates')
-                index_end = text.find('Car #2 Mask Coordinates', index_start)
-                car_text = text[index_start:index_end]
-                coords = extract_coordinates(car_text)
-                # Store the centroid of the car for simplicity
-                centroid = np.mean(coords, axis=0)
-                all_coordinates.append(centroid)
-
+            file_content = file.read()
+            json_objects = file_content.split('\n')  # Split the file content by newline character
+            for json_object in json_objects:
+                if json_object:  # Check if the json object is not empty
+                    coords = json.loads(json_object)  # Load coordinates from json object
+                    print(f"Coordinates extracted from {filename}: {coords}")  # Debugging line
+                    centroid = np.mean(coords, axis=0)
+                    all_coordinates.append(centroid)
+            
 # Rest of the code for creating the grid and plotting remains the same
 all_coordinates = np.array(all_coordinates)
 
@@ -439,5 +439,294 @@ plt.title('Heatmap of All Coordinates')
 plt.xlabel('Normalized X Coordinate')
 plt.ylabel('Normalized Y Coordinate')
 plt.colorbar(label='Log Probability')
+plt.show()
+# %% extract the xyn instead of xy
+import os
+import re
+import numpy as np
+
+# Function to extract coordinates for all cars in the text
+def extract_all_car_coordinates(text):
+    car_coords_dict = {}
+    # Match each car's coordinates, expecting the format: "Car #1 Mask Coordinates:\n ... \n\n"
+    car_sections = re.split(r'(Car #\d+ Mask Coordinates:)', text)
+    for i in range(1, len(car_sections), 2):  # Increment by 2 to skip the actual coordinates and only get headers
+        car_number = car_sections[i].split()[1]  # Car number is the second word in the header
+        coords_text = car_sections[i+1].strip()
+        coords_list = extract_xyn(coords_text)
+        if coords_list.size > 0:
+            if car_number not in car_coords_dict:
+                car_coords_dict[car_number] = []
+            car_coords_dict[car_number].append(coords_list)
+    return car_coords_dict
+
+# Function to extract xyn coordinates from a string
+def extract_xyn(coord_string):
+    # Match the xyn line and extract the array
+    match = re.search(r'xyn: \[array\(\[\[(.*?)\]\]', coord_string, re.DOTALL)
+    if match:
+        xyn_string = match.group(1)
+        # Split the string into coordinate triples and convert to float
+        coord_triples = re.findall(r'\[\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]', xyn_string)
+        return np.array(coord_triples, dtype=float)
+    else:
+        print(f"No match found in the following coordinate string:\n{coord_string}")
+        return np.array([], dtype=float)
+
+
+# Path to the directory containing the mask files
+input_directory = 'Assets/Mask Outputs'
+output_directory = os.path.join(input_directory, 'Car_Mask_Files_normalized')
+
+# Create the output directory if it doesn't exist
+os.makedirs(output_directory, exist_ok=True)
+
+# Loop through each file and compile coordinates for each car
+for filename in sorted(os.listdir(input_directory)):
+    if filename.endswith('_masks.txt'):
+        filepath = os.path.join(input_directory, filename)
+        with open(filepath, 'r') as file:
+            text = file.read()
+            car_coords_dict = extract_all_car_coordinates(text)
+            if not car_coords_dict:
+                print(f"No coordinates extracted from file: {filename}")
+            for car_number, coords_list in car_coords_dict.items():
+                car_filepath = os.path.join(output_directory, f'car_{car_number}_masks.txt')
+                # Append coordinates to each car's file
+                with open(car_filepath, 'a') as car_file:
+                    for coords in coords_list:
+                        car_file.write(f'{coords.tolist()}\n')
+
+print("Completed processing all mask files.")
+
+# %% Plot the masks for all cars v.3 from xyn (works on 3 cars spereatly)
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import json
+
+# Path to the directory containing the mask files
+directory = 'Assets/Mask Outputs/Car_Mask_Files_normalized'
+
+# Define the car numbers to process
+car_numbers = [1, 2, 3]
+
+# Loop through each car number
+for car_number in car_numbers:
+    # Initialize an empty list to store coordinates
+    all_coordinates = []
+
+    # Loop through each file in the directory
+    for filename in os.listdir(directory):
+        if filename.endswith('_masks.txt') and f"car_#{car_number}" in filename:
+            print(f"Processing file {filename} for car #{car_number}")  # Debugging line
+            with open(os.path.join(directory, filename), 'r') as file:
+                file_content = file.read()
+                json_objects = file_content.split('\n')  # Split the file content by newline character
+                for json_object in json_objects:
+                    if json_object:  # Check if the json object is not empty
+                        coords = json.loads(json_object)  # Load coordinates from json object
+                        centroid = np.mean(coords, axis=0)
+                        all_coordinates.append(centroid)
+    # Continue with the rest of the code for each car
+    all_coordinates = np.array(all_coordinates)
+
+    # Normalize coordinates to range [0, 1] if not already
+    max_x = np.max(all_coordinates[:, 0])
+    max_y = np.max(all_coordinates[:, 1])
+    all_coordinates[:, 0] /= max_x
+    all_coordinates[:, 1] /= max_y
+
+    # Define the grid size
+    grid_size = (100, 100)  # for example, adjust as needed
+
+    # Create a grid to accumulate counts
+    grid = np.zeros(grid_size)
+
+    # Iterate over each coordinate and increment the grid cells
+    for x, y in all_coordinates:
+        grid_x = int(x * (grid_size[0] - 1))  # Scale to grid size
+        grid_y = int(y * (grid_size[1] - 1))  # Scale to grid size
+        grid[grid_x, grid_y] += 1
+
+    # Normalize the grid to convert counts to probabilities
+    probability_map = grid / len(all_coordinates)
+
+    # Plot the probability map
+    plt.imshow(probability_map, cmap='hot', interpolation='nearest')
+    plt.colorbar()
+    plt.title(f"Probability Map of Car #{car_number}")
+    plt.show()
+# %% Plot the masks for all cars v.4 from xyn (trying to combine all the plots to single one)
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import json
+
+# Path to the directory containing the mask files
+directory = 'Assets/Mask Outputs/Car_Mask_Files_normalized'
+
+# Define the car numbers to process
+car_numbers = [1, 2, 3]
+
+# Initialize an empty list to store coordinates for all cars
+all_coordinates = []
+
+# Loop through each car number
+for car_number in car_numbers:
+    # Loop through each file in the directory
+    for filename in os.listdir(directory):
+        if filename.endswith('_masks.txt') and f"car_#{car_number}" in filename:
+            print(f"Processing file {filename} for car #{car_number}")  # Debugging line
+            with open(os.path.join(directory, filename), 'r') as file:
+                file_content = file.read()
+                json_objects = file_content.split('\n')  # Split the file content by newline character
+                for json_object in json_objects:
+                    if json_object:  # Check if the json object is not empty
+                        coords = json.loads(json_object)  # Load coordinates from json object
+                        centroid = np.mean(coords, axis=0)
+                        all_coordinates.append(centroid)
+
+# Continue with the rest of the code for all cars
+all_coordinates = np.array(all_coordinates)
+
+# Normalize coordinates to range [0, 1] if not already
+max_x = np.max(all_coordinates[:, 0])
+max_y = np.max(all_coordinates[:, 1])
+all_coordinates[:, 0] /= max_x
+all_coordinates[:, 1] /= max_y
+
+# Define the grid size
+grid_size = (100, 100)  # for example, adjust as needed
+
+# Create a grid to accumulate counts
+grid = np.zeros(grid_size)
+
+# Iterate over each coordinate and increment the grid cells
+for x, y in all_coordinates:
+    grid_x = int(x * (grid_size[0] - 1))  # Scale to grid size
+    grid_y = int(y * (grid_size[1] - 1))  # Scale to grid size
+    grid[grid_x, grid_y] += 1
+
+# Normalize the grid to convert counts to probabilities
+probability_map = grid / len(all_coordinates)
+
+# Plot the probability map
+plt.imshow(probability_map, cmap='hot', interpolation='nearest')
+plt.colorbar()
+plt.title("Combined Probability Map for All Cars")
+plt.show()
+# %% Plot the masks for all cars v.5 from xyn (all cars in folder)
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import json
+
+# Path to the directory containing the mask files
+directory = 'Assets/Mask Outputs/Car_Mask_Files_normalized'
+
+all_coordinates = []
+
+# Loop through each file in the directory
+for filename in os.listdir(directory):
+    if filename.endswith('_masks.txt'):
+        # Extract the car number from the filename
+        car_number = filename.split('_')[1]  # Assuming the filename format is "car_#_masks.txt"
+        print(f"Processing file {filename} for car #{car_number}")  # Debugging line
+        with open(os.path.join(directory, filename), 'r') as file:
+            file_content = file.read()
+            json_objects = file_content.split('\n')  # Split the file content by newline character
+            for json_object in json_objects:
+                if json_object:  # Check if the json object is not empty
+                    coords = json.loads(json_object)  # Load coordinates from json object
+                    centroid = np.mean(coords, axis=0)
+                    all_coordinates.append(centroid)
+
+# Continue with the rest of the code for all cars
+all_coordinates = np.array(all_coordinates)
+
+# Normalize coordinates to range [0, 1] if not already
+max_x = np.max(all_coordinates[:, 0])
+max_y = np.max(all_coordinates[:, 1])
+all_coordinates[:, 0] /= max_x
+all_coordinates[:, 1] /= max_y
+
+# Define the grid size
+grid_size = (100, 100)  # for example, adjust as needed
+
+# Create a grid to accumulate counts
+grid = np.zeros(grid_size)
+
+# Iterate over each coordinate and increment the grid cells
+for x, y in all_coordinates:
+    grid_x = int(x * (grid_size[0] - 1))  # Scale to grid size
+    grid_y = int(y * (grid_size[1] - 1))  # Scale to grid size
+    grid[grid_x, grid_y] += 1
+
+# Normalize the grid to convert counts to probabilities
+probability_map = grid / len(all_coordinates)
+
+# Plot the probability map
+plt.imshow(probability_map, cmap='hot', interpolation='nearest')
+plt.colorbar()
+plt.title("Combined Probability Map for All Cars")
+plt.show()
+# %% final
+import os
+import json
+import numpy as np
+import matplotlib.pyplot as plt
+
+directory =  'Assets/Mask Outputs/Car_Mask_Files_normalized' # replace with your directory
+all_coordinates = []
+
+# Loop through each file in the directory
+for filename in os.listdir(directory):
+    if filename.endswith('_masks.txt'):
+        print(f"Processing file {filename}")  # Debugging line
+        with open(os.path.join(directory, filename), 'r') as file:
+            file_content = file.read()
+            json_objects = file_content.split('\n')  # Split the file content by newline character
+            for json_object in json_objects:
+                if json_object:  # Check if the json object is not empty
+                    coords = json.loads(json_object)  # Load coordinates from json object
+                    centroid = np.mean(coords, axis=0)
+                    all_coordinates.append(centroid)
+
+# Continue with the rest of the code for all cars
+all_coordinates = np.array(all_coordinates)
+
+# Normalize coordinates to range [0, 1] if not already
+max_x = np.max(all_coordinates[:, 0])
+max_y = np.max(all_coordinates[:, 1])
+all_coordinates[:, 0] /= max_x
+all_coordinates[:, 1] /= max_y
+
+# Define the grid size
+grid_size = (100, 100)  # for example, adjust as needed
+
+# Create a grid to accumulate counts
+grid = np.zeros(grid_size)
+
+# Iterate over each coordinate and increment the grid cells
+for x, y in all_coordinates:
+    grid_x = int(x * (grid_size[0] - 1))  # Scale to grid size
+    grid_y = int(y * (grid_size[1] - 1))  # Scale to grid size
+    grid[grid_x, grid_y] += 1
+
+# Normalize the grid to convert counts to probabilities
+probability_map = grid / len(all_coordinates)
+
+# Define the minimum and maximum values for the colormap
+z_min, z_max = np.min(probability_map), np.max(probability_map)
+
+# Define the minimum and maximum values for the x and y coordinates
+x_min, x_max = 0, 1  # Since the coordinates were normalized to [0, 1]
+y_min, y_max = 0, 1  # Since the coordinates were normalized to [0, 1]
+
+# Plot the probability map
+plt.imshow(probability_map, cmap='hot', vmin=z_min, vmax=z_max, extent=[x_min, x_max, y_min, y_max], interpolation='nearest', origin='lower')
+plt.colorbar()
+plt.title("Combined Probability Map for All Cars")
 plt.show()
 # %%
