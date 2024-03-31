@@ -194,7 +194,7 @@ plt.ylabel("Y coordinate")
 plt.gca().set_aspect('equal', adjustable='box')
 plt.savefig('output_shape.png')
 
-#%% Creating prob map for a single car
+#%% Creating prob map for a single car blue
 
 import os
 import re
@@ -202,64 +202,39 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 
-# Function to extract coordinates
 def extract_coordinates(text):
-    # Find all coordinate pairs in the text
     coord_pairs = re.findall(r'\[\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]', text)
-    # Convert strings to floats and make a numpy array
-    coords_list = [tuple(map(float, pair)) for pair in coord_pairs]
-    return np.array(coords_list)
+    return np.array([tuple(map(float, pair)) for pair in coord_pairs])
 
-# Path to the directory containing the mask files
 directory = 'Assets/Mask Outputs/Car_Mask_Files_normalized'
 
-# Initialize an empty list to store coordinates
-all_coordinates = []
+# Filename for Car #1
+car_file = 'car_#1_masks.txt'
 
-# Loop through each file in the directory
-for filename in os.listdir(directory):
-    print(f"Processing file {filename}")  # Debugging line
-    if filename.endswith('_masks.txt'):
-        with open(os.path.join(directory, filename), 'r') as file:
-            file_content = file.read()
-            json_objects = file_content.split('\n')  # Split the file content by newline character
-            for json_object in json_objects:
-                if json_object:  # Check if the json object is not empty
-                    coords = json.loads(json_object)  # Load coordinates from json object
-                    print(f"Coordinates extracted from {filename}: {coords}")  # Debugging line
-                    centroid = np.mean(coords, axis=0)
-                    all_coordinates.append(centroid)
-            
-# Rest of the code for creating the grid and plotting remains the same
-all_coordinates = np.array(all_coordinates)
+if car_file in os.listdir(directory):
+    with open(os.path.join(directory, car_file), 'r') as file:
+        file_content = file.read()
+        json_objects = file_content.split('\n')
+        for json_object in json_objects:
+            if json_object:
+                coords = json.loads(json_object)
+                if coords:  # Ensure that there are coordinates to process
+                    coords = np.array(coords)
 
-# Normalize coordinates to range [0, 1] if not already
-max_x = np.max(all_coordinates[:, 0])
-max_y = np.max(all_coordinates[:, 1])
-all_coordinates[:, 0] /= max_x
-all_coordinates[:, 1] /= max_y
+                    # Normalize the coordinates
+                    coords[:, 0] /= np.max(coords[:, 0])
+                    coords[:, 1] /= np.max(coords[:, 1])
 
-# Define the grid size
-grid_size = (100, 100)  # for example, adjust as needed
+                    # Plot the filled polygon
+                    plt.fill(coords[:, 0], coords[:, 1], color='blue', alpha=0.5)
 
-# Create a grid to accumulate counts
-grid = np.zeros(grid_size)
-
-# Iterate over each coordinate and increment the grid cells
-for x, y in all_coordinates:
-    grid_x = int(x * (grid_size[0] - 1))  # Scale to grid size
-    grid_y = int(y * (grid_size[1] - 1))  # Scale to grid size
-    grid[grid_x, grid_y] += 1
-
-# Normalize the grid to convert counts to probabilities
-probability_map = grid / len(all_coordinates)
-
-# Plot the probability map
-plt.imshow(probability_map, cmap='hot', interpolation='nearest')
-plt.colorbar()
-plt.title("Probability Map of Car #1")
-plt.show()
-
+        plt.title("Car #1 Occupancy Visualization", fontsize=15, fontweight='bold')
+        plt.xlabel('Normalized X Coordinate', fontsize=12)
+        plt.ylabel('Normalized Y Coordinate', fontsize=12)
+        plt.gca().set_aspect('equal', adjustable='box')
+        plt.show()
+else:
+    print("Mask file for Car #1 not found.")
 # %% Organize the masks files per car
 import os
 import re
@@ -729,4 +704,63 @@ plt.imshow(probability_map, cmap='hot', vmin=z_min, vmax=z_max, extent=[x_min, x
 plt.colorbar()
 plt.title("Combined Probability Map for All Cars")
 plt.show()
+# %% creatuing prob map for a single car 'hot'
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import json
+
+def read_json_object(json_object):
+    coords = json.loads(json_object)
+    return np.array(coords)
+
+directory = 'Assets/Mask Outputs/Car_Mask_Files_normalized'
+car_file = 'car_#1_masks.txt'
+full_path = os.path.join(directory, car_file)
+
+if os.path.exists(full_path):
+    with open(full_path, 'r') as file:
+        file_content = file.readlines()
+
+    # Create a grid to accumulate the heat values
+    grid_size = (100, 100)
+    heat_map = np.zeros(grid_size)
+
+    for json_object in file_content:
+        if json_object.strip():  # Ensure the JSON object is not empty
+            coords = read_json_object(json_object)
+            if coords.size > 0:
+                # Normalize the coordinates
+                coords[:, 0] /= np.max(coords[:, 0])
+                coords[:, 1] /= np.max(coords[:, 1])
+
+                # Populate the heat map
+                for coord in coords:
+                    x, y = int(coord[0] * (grid_size[0] - 1)), int(coord[1] * (grid_size[1] - 1))
+                    heat_map[y, x] += 1  # Increment the cell corresponding to this coordinate
+
+    # Normalize the heat map
+    heat_map /= np.max(heat_map)
+
+    # Generate a smoothed heat map using Gaussian filter, if necessary
+    # from scipy.ndimage.filters import gaussian_filter
+    # heat_map_smoothed = gaussian_filter(heat_map, sigma=2)
+
+    # Create the x and y coordinates for the grid
+    x = np.linspace(0, 1, grid_size[0])
+    y = np.linspace(0, 1, grid_size[1])
+    X, Y = np.meshgrid(x, y)
+
+    # Plot filled contour
+    plt.contourf(X, Y, heat_map, levels=100, cmap='hot')
+    plt.colorbar(label='Intensity')
+    plt.title(f"Heat Map of Car #1's Location Over Time", fontsize=14, fontweight='bold')
+    plt.xlabel('Normalized X Coordinate', fontsize=10)
+    plt.ylabel('Normalized Y Coordinate', fontsize=10)
+    
+    plt.gca().set_aspect('equal', adjustable='box')  # Keep the aspect ratio of the plot square
+    plt.show()
+
+else:
+    print(f"File not found: {car_file}")
 # %%
