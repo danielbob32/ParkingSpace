@@ -5,8 +5,168 @@ import matplotlib.pyplot as plt
 import numpy as np
 import subprocess
 import os
-import numpy as np
+import cv2
 
+#%% Segmenatation of raw images to create masks
+
+from ultralytics import YOLO
+import os
+import shutil
+import time
+
+# Initialize the model
+model = YOLO('yolov8x-seg.pt')
+
+# Directories
+image_dir = 'Assets/Baseline Images'
+output_directory = 'Assets/Segmented Images'
+base_segmentation_output_dir = 'runs/segment'  # Base directory where YOLO saves results
+
+# Ensure output directory exists
+if not os.path.exists(output_directory):
+    os.makedirs(output_directory)
+
+# Function to find the most recent directory in a given base directory
+def find_latest_directory(base_path):
+    dir_paths = [os.path.join(base_path, d) for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
+    if not dir_paths:
+        return None
+    latest_dir = max(dir_paths, key=os.path.getmtime)
+    return latest_dir
+
+# Process each image
+for image_file in os.listdir(image_dir):
+    if image_file.lower().endswith('.jpg'):
+        image_path = os.path.join(image_dir, image_file)
+
+        # Run the model (results are saved to a directory)
+        model(source=image_path, show=False, conf=0.05, save=True, classes=2,
+              show_labels=False, show_conf=False, show_boxes=False)
+
+        # Wait a bit to ensure the filesystem is updated
+        time.sleep(1)
+
+        # Find the latest 'predict' directory
+        latest_predict_dir = find_latest_directory(base_segmentation_output_dir)
+        if latest_predict_dir:
+            # Assuming the first file in the latest predict directory is the processed image
+            for segmented_file in os.listdir(latest_predict_dir):
+                segmented_file_path = os.path.join(latest_predict_dir, segmented_file)
+                output_path = os.path.join(output_directory, segmented_file)
+
+                # Move or copy the segmented file to the output directory
+                shutil.move(segmented_file_path, output_path)
+                break  # Only process the first file for each image
+
+print("Segmentation process completed.")
+
+#%% Produce binary mask hsv
+
+import cv2
+import numpy as np
+import os
+
+# Directories
+segmented_image_dir = 'Assets/Segmented Images'  
+binary_mask_dir = 'Assets/Mask Outputs'  
+
+# Ensure binary mask directory exists
+os.makedirs(binary_mask_dir, exist_ok=True)
+
+# Define the color range for the orange masks in the HSV color space
+hsv_lower_range = np.array([5, 100, 100], dtype=np.uint8)
+hsv_upper_range = np.array([15, 255, 255], dtype=np.uint8)
+
+# Morphological operations kernel
+kernel = np.ones((3,3), np.uint8)
+
+# Process each segmented image
+for image_file in os.listdir(segmented_image_dir):
+    if image_file.lower().endswith(('.png', '.jpg', '.jpeg')):
+        image_path = os.path.join(segmented_image_dir, image_file)
+
+        # Load and convert the image to HSV
+        image = cv2.imread(image_path)
+        image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+        # Create the binary mask
+        hsv_mask = cv2.inRange(image_hsv, hsv_lower_range, hsv_upper_range)
+        hsv_mask = cv2.morphologyEx(hsv_mask, cv2.MORPH_OPEN, kernel)
+        hsv_mask = cv2.morphologyEx(hsv_mask, cv2.MORPH_CLOSE, kernel)
+
+        # Save the binary mask
+        binary_mask_path = os.path.join(binary_mask_dir, f'{os.path.splitext(image_file)[0]}_mask.png')
+        cv2.imwrite(binary_mask_path, hsv_mask)
+
+print("HSV mask generation process completed.")
+
+#%% Make probability map from masks
+
+import cv2
+import numpy as np
+import os
+
+segmented_image_dir = 'Assets/Mask Outputs'  # Path to the folder with segmented mask images
+output_directory = 'Assets/Grey Scale'  # Path to save the output probability map
+output_path = os.path.join(output_directory, 'probability_map.png')  # Full output file path
+
+# Ensure the output directory exists
+os.makedirs(output_directory, exist_ok=True)
+
+# Initialize an empty array to accumulate the probabilities
+accumulator = None
+
+# Count the number of images processed
+image_count = 0
+
+# Iterate over the segmented mask images
+for file_name in os.listdir(segmented_image_dir):
+    if not file_name.lower().endswith(('.png', '.jpg', '.jpeg')):
+        continue  # Skip non-image files
+    
+    file_path = os.path.join(segmented_image_dir, file_name)
+    mask = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+
+    if mask is None:
+        print(f"Could not load image {file_name}")
+        continue  # Skip any files that couldn't be loaded
+
+    print(f"Processing image {file_name}")
+
+    # Initialize the accumulator with the shape of the first mask
+    if accumulator is None:
+        accumulator = np.zeros_like(mask, dtype=np.float32)
+
+    # Assume the mask is already binary with cars as white (255) and the rest as black (0)
+    binary_mask = mask.astype(np.float32) / 255  # Normalize the mask to [0.0, 1.0]
+
+    # Accumulate the probabilities
+    accumulator += binary_mask
+    image_count += 1
+
+# Normalize the accumulator to get the probability map
+if image_count > 0:
+    probability_map = accumulator / image_count
+    # Convert the probability map to a grayscale image in [0, 255]
+    probability_map_image = np.uint8(probability_map * 255)
+    # Save the probability map image
+    result = cv2.imwrite(output_path, probability_map_image)
+    if result:
+        print(f"Probability map saved successfully to {output_path}")
+    else:
+        print(f"Failed to save the probability map. Check the output path: {output_path}")
+else:
+    print("No images were processed. Check the input directory.")
+
+
+
+
+
+
+
+#%%
+#*********************** Old code for reference, will be deleted as progressed ***************************#
+    
 #%% Make Snips
 
 # Input and output folders
@@ -63,7 +223,7 @@ results = model(source='Assets/Baseline Images/1.jpg', show=False, conf=0.05, sa
 #%% Segmantation for masks - single image
 model = YOLO('yolov8x-seg.pt')
 
-results = model(source='Assets/Baseline Images/1.jpg', show=False, conf=0.05, save=True, classes=2, save_txt=True, save_conf=True, line_width=1)
+results = model(source='Assets/Baseline Images/frame_0001.jpg', show=False, conf=0.05, save=True, classes=2,show_labels=False,show_conf=False, show_boxes=False)
 
 if hasattr(results[0], 'masks') and results[0].masks is not None:
     # Prepare the text content
@@ -763,4 +923,35 @@ if os.path.exists(full_path):
 
 else:
     print(f"File not found: {car_file}")
-# %%
+# %% Mask for a single image w.o RGB
+    
+import cv2
+import numpy as np
+
+# Load the image from file
+image_path = 'runs/segment/predict4/frame_0001.jpg'  # Make sure to provide the correct path to your image file
+image = cv2.imread(image_path)
+
+# Convert the image to the HSV color space
+image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+# Define the color range for the orange masks in the HSV color space
+# These values are approximations and may need to be fine-tuned
+hsv_lower_range = np.array([5, 100, 100], dtype=np.uint8)
+hsv_upper_range = np.array([15, 255, 255], dtype=np.uint8)
+
+# Create a mask that detects all the pixels within the HSV range
+hsv_mask = cv2.inRange(image_hsv, hsv_lower_range, hsv_upper_range)
+
+# Apply morphological operations to clean up the mask
+# These operations help to remove noise and small dots
+kernel = np.ones((3,3), np.uint8)
+hsv_mask = cv2.morphologyEx(hsv_mask, cv2.MORPH_OPEN, kernel)
+hsv_mask = cv2.morphologyEx(hsv_mask, cv2.MORPH_CLOSE, kernel)
+
+# Save the resulting binary mask to a file
+binary_mask_path = 'path_to_save_binary_mask.png'  # Provide the path where you want to save the mask
+cv2.imwrite(binary_mask_path, hsv_mask)
+
+# The saved image will have the car masks in white and the background in black
+
