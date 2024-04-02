@@ -1,14 +1,136 @@
 #%%
-from ultralytics import YOLO
+
+import numpy as np
+import cv2
+import os
 import torch
 import matplotlib.pyplot as plt
-import numpy as np
 import subprocess
-import os
-import cv2
+from ultralytics import YOLO
+import time
+#%% Calc running time of the model
+model = YOLO('yolov8n.pt')
 
+# Load the video
+video_path = 'Assets/Test Area/input/testvid.mp4'  # Replace with your video file path
+video = cv2.VideoCapture(video_path)
+output_directory = 'Assets/Test Area/output'
+
+# Check if video opened successfully
+if not video.isOpened():
+    print("Error: Could not open video.")
+    exit()
+
+# Get video properties
+fps = video.get(cv2.CAP_PROP_FPS)
+total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+video_length = total_frames / fps  # in seconds
+
+# Initialize variables for the loop
+frames_processed = 0
+start_time = time.time()
+
+# Process the video frame by frame
+while video.isOpened():
+    ret, frame = video.read()
+    if not ret:
+        break
+
+    # Object detection
+    results = model(frame,stream=True)
+
+    # Save the frame
+    frame_filename = f"{output_directory}frame_{frames_processed}.jpg"
+    cv2.imwrite(frame_filename, frame)
+
+    frames_processed += 1
+    elapsed_time = time.time() - start_time  # in seconds
+    estimated_total_time = elapsed_time / frames_processed * total_frames  # in seconds
+    estimated_finish_time = start_time + estimated_total_time  # Timestamp when finished
+
+    # Calculate the remaining time (in seconds)
+    remaining_time = max(estimated_finish_time - time.time(), 0)  # Prevent negative values
+
+    # Convert times into a human-readable format (hours:minutes:seconds)
+    elapsed_time_str = time.strftime('%H:%M:%S', time.gmtime(elapsed_time))
+    remaining_time_str = time.strftime('%H:%M:%S', time.gmtime(remaining_time))
+
+    # Display the progress
+    progress_display = f'{frames_processed}/{total_frames} frames processed in {elapsed_time_str} time, ' \
+                       f'estimated to finish in {remaining_time_str}'
+
+    # Print the progress
+    print(progress_display, end='\r', flush=True)
+
+
+# When everything done, release the capture
+video.release()
+cv2.destroyAllWindows()
+# Print the final status
+print(f'\nProcessing finished. Total time elapsed: {elapsed_time_str}')
+#%% Snip captures from video if movment detected
+
+
+# Helper functions
+def calculate_centroid(x1, y1, x2, y2):
+    return ((x1 + x2) / 2, (y1 + y2) / 2)
+
+def is_any_car_moving(prev_car_positions, current_car_positions, threshold=10):
+    for car_id, current_centroid in current_car_positions.items():
+        if car_id in prev_car_positions:
+            prev_centroid = prev_car_positions[car_id]
+            dist = np.linalg.norm(np.array(current_centroid) - np.array(prev_centroid))
+            if dist > threshold:
+                return True
+    return False
+
+# Initialize YOLO model
+model = YOLO('yolov8n.pt')
+
+# Process the video
+video_path = 'Assets/Test Area/input/F18927402_1_20240327T150908Z_20240327T150919Z.mp4'
+output_directory = 'Assets/Test Area/output'
+video = cv2.VideoCapture(video_path)
+
+prev_car_positions = {}
+current_frame = 0
+
+while video.isOpened():
+    ret, frame = video.read()
+    if not ret:
+        break
+
+    # Detect objects in the frame
+    results = model(frame)
+    
+    # Assuming the first Results object in the list contains the detections for the current frame
+    current_results = results[0]
+
+    current_car_positions = {}
+
+    if hasattr(current_results, 'boxes') and current_results.boxes:
+        for box in current_results.boxes.data:
+            x1, y1, x2, y2, conf, class_id = box.tolist()
+            if current_results.names[int(class_id)] == 'car':  # Check if the detected object is a car
+                centroid = calculate_centroid(x1, y1, x2, y2)
+                current_car_positions[box] = centroid  # Using the entire box as a unique identifier
+    print("no movment")
+    if is_any_car_moving(prev_car_positions, current_car_positions):
+        output_path = f'{output_directory}frame_{current_frame}.jpg'
+        try:
+            cv2.imwrite(output_path, frame)
+            print(f'Movement detected, frame saved: {output_path}')  # Indication that a frame has been saved
+        except Exception as e:
+            print(f'Error saving frame: {e}')
+
+    # Update the previous positions with the current positions for the next iteration
+    prev_car_positions = current_car_positions
+
+    current_frame += 1
+
+video.release()
+cv2.destroyAllWindows()
 #%% Segmenatation of raw images to create masks
-
 from ultralytics import YOLO
 import os
 import shutil
@@ -160,8 +282,18 @@ else:
 
 
 
+#%% grayscale attempt
 
+import cv2
 
+# Load the image
+image = cv2.imread('Assets/Grey Scale/probability_map.png')
+
+# Convert the image to grayscale if it's not already
+gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+
+# Save or display the grayscale image as needed
+cv2.imwrite('grayscale_image.png', gray_image)
 
 
 #%%
