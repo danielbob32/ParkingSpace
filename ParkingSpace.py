@@ -7,6 +7,37 @@ from ultralytics import YOLO
 import time
 import shutil
 import re
+import json
+# %% utility functions
+# Define utility functions
+def extract_video_frame(file_name):
+    match = re.match(r'video_(\d+)_frame(\d+)\.png', file_name)
+    if match:
+        return int(match.group(1)), int(match.group(2))
+    else:
+        return None
+
+def get_contour_center(contour):
+    M = cv2.moments(contour)
+    if M["m00"] != 0:
+        return (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+    return None
+
+# Functions to save and load regions
+def save_regions_to_file(near_region, far_region, ignore_regions, file_path='regions.json'):
+    data = {'near_region': near_region.tolist(), 'far_region': far_region.tolist(), 'ignore_regions': [region.tolist() for region in ignore_regions]}
+    with open(file_path, 'w') as file:
+        json.dump(data, file)
+
+
+def load_regions_from_file(file_path='regions.json'):
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+    return (
+        np.array(data['near_region']), 
+        np.array(data['far_region']), 
+        [np.array(region) for region in data['ignore_regions']]
+    )
 
 # %% Snipshops from video
 input_folder = 'Assets/VideoFiles'
@@ -288,94 +319,76 @@ else:
 
 
 
-# %% draw areas
-# Initialize a list to store clicked points
+# %% Draw areas and save
+# This section should be executed once to define and save regions
 coords = []
-
 def click_event(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
         coords.append((x, y))
-        # Draws a circle where you click
         cv2.circle(img, (x, y), 3, (0, 255, 0), -1)
         cv2.imshow('image', img)
-        print(f"Point chosen: ({x}, {y})")  # Prints to the Jupyter output cell
+        print(f"Point chosen: ({x}, {y})")
 
-# Load your image
-img = cv2.imread(prob_map_path, cv2.IMREAD_COLOR)
-
-# Display the image in a window
+img = cv2.imread('Assets/ProbMap/probability_map.png', cv2.IMREAD_COLOR)
 cv2.imshow('image', img)
 cv2.setMouseCallback('image', click_event)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-# %% define areas   
-# Use the points from the coords list to define your regions
-# Here's an example if you chose 12 points: 4 for near region, 4 for far region, and 4 for ignore region
-
 near_region = np.array(coords[:4], dtype=np.int32)
 far_region = np.array(coords[4:8], dtype=np.int32)
-ignore_regions = [np.array(coords[8:], dtype=np.int32)]  # Assuming the last 4 points are for ignore region
+ignore_regions = [np.array(coords[8:], dtype=np.int32)] 
+save_regions_to_file(near_region, far_region, ignore_regions)
 
-# Print out the regions for confirmation
-print("Near Region:", near_region)
-print("Far Region:", far_region)
-print("Ignore Regions:", ignore_regions)
 
-# Draw the near region in blue
-cv2.polylines(img, [near_region], True, (255, 0, 0), 3)
 
-# Draw the far region in green
-cv2.polylines(img, [far_region], True, (0, 255, 0), 3)
-
-# Draw each ignore region in red
-for region in ignore_regions:
-    cv2.polylines(img, [region], True, (0, 0, 255), 3)
-
-# Show the image with the regions drawn on it
-cv2.imshow('Defined Regions', img)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-
-# Optionally, save this image to check the regions
-cv2.imwrite('defined_regions.png', img)
-# %% process image
-import matplotlib.pyplot as plt
-
-# Define utility functions
-def get_contour_center(contour):
-    M = cv2.moments(contour)
-    if M["m00"] != 0:
-        return (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-    return None
-
-# Thresholds for 'near' and 'far' regions and solidity
-threshold_near = 15000
-threshold_far = 1500
-threshold_solidity = 0.95 # Contours with a solidity less than this will be filtered out
-
-# Load the original probability map and mask image
+# %% Process image
+near_region, far_region, ignore_regions = load_regions_from_file()
 prob_map_path = 'Assets/ProbMap/probability_map.png'
 hsv_mask_file = 'Assets/MaskOutputs/video_0_frame0_mask.png'
-prob_map = cv2.imread(prob_map_path, cv2.IMREAD_GRAYSCALE)
-mask_img = cv2.imread(hsv_mask_file, cv2.IMREAD_GRAYSCALE)
+processed_image_path = 'Assets/ParkingSpaces/processed_image.png'
 
-# Invert the mask image and combine it with the probability map
+# Load the probability map
+prob_map = cv2.imread(prob_map_path, cv2.IMREAD_GRAYSCALE)
+
+# Invert the mask image
+mask_img = cv2.imread(hsv_mask_file, cv2.IMREAD_GRAYSCALE)
 mask_img_inv = cv2.bitwise_not(mask_img)
+
+# Combine the probability map with the inverted mask
 prob_map_combined = cv2.bitwise_and(prob_map, prob_map, mask=mask_img_inv)
 
-# Threshold the combined map to binary
+# Apply thresholding to create a binary map
 _, binary_map = cv2.threshold(prob_map_combined, 80, 255, cv2.THRESH_BINARY)
 
-# Additional parameters for morphological operations
-# If the current kernel size is too strong, you can try a smaller one:
-kernel_erode = np.ones((3 ,3), np.uint8)  # Try reducing the size of the kernel
+# Define kernel size for morphological operations to separate close contours
+kernel_size = 4 # This may need to be adjusted based on your specific contours
+kernel = np.ones((kernel_size, kernel_size), np.uint8)
 
-# Perform erosion to separate connected objects
-eroded_image = cv2.erode(binary_map, kernel_erode, iterations=1)
+# Perform erosion to separate contours that are very close together
+eroded_image = cv2.erode(binary_map, kernel, iterations=1)
 
-# Find contours on the eroded image
+# Optionally, perform dilation to restore the general shape of the contours
+# dilated_image = cv2.dilate(eroded_image, kernel, iterations=1)
+
+# Now find contours on the eroded (and optionally dilated) image
 contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+
+
+# Define thresholds for near and far regions separately
+thresholds = {
+    'near_region': {
+        'min_area': 11000,  # example threshold values for near region, adjust as necessary
+        'max_aspect_ratio': 4,
+        'min_solidity': 0.8,
+    },
+    'far_region': {
+        'min_area': 1000,   # example threshold values for far region, adjust as necessary
+        'max_aspect_ratio': 4,
+        'min_solidity': 0.5,
+    }
+}
 
 final_contours = []
 for contour in contours:
@@ -383,48 +396,51 @@ for contour in contours:
     if center is None:
         continue
 
+    # Skip contours in ignore regions
+    if any(cv2.pointPolygonTest(region, center, False) >= 0 for region in ignore_regions):
+        continue
+
     area = cv2.contourArea(contour)
+
+    # Check which region the contour center point is in
+    if cv2.pointPolygonTest(near_region, center, False) >= 0:
+        region_thresholds = thresholds['near_region']
+    elif cv2.pointPolygonTest(far_region, center, False) >= 0:
+        region_thresholds = thresholds['far_region']
+    else:
+        continue  # if it's not in any region, skip it
+
+    # Apply thresholds based on the region
+    if area < region_thresholds['min_area']:
+        continue
+
+    # Calculate bounding rect and aspect ratio
+    x, y, w, h = cv2.boundingRect(contour)
+    aspect_ratio = max(w, h) / min(w, h) if min(w, h) > 0 else max(w, h)
+
+    if aspect_ratio > region_thresholds['max_aspect_ratio']:
+        continue
+
+    # Calculate solidity
     hull = cv2.convexHull(contour)
     hull_area = cv2.contourArea(hull)
-    solidity = float(area) / hull_area if hull_area > 0 else 0
+    solidity = area / hull_area if hull_area > 0 else 0
 
-    # Check if the contour is in 'near' or 'far' region
-    in_near_region = cv2.pointPolygonTest(near_region, center, False) >= 0
-    in_far_region = cv2.pointPolygonTest(far_region, center, False) >= 0
+    if solidity < region_thresholds['min_solidity']:
+        continue
 
-    # Check if the contour is within any ignore regions
-    in_ignore_region = any(cv2.pointPolygonTest(region, center, False) >= 0 for region in ignore_regions)
-    
-    # Apply area and solidity filters based on the region
-    if in_near_region and not in_ignore_region:
-        if area >= threshold_near and solidity >= threshold_solidity:
-            final_contours.append(contour)
-    elif in_far_region and not in_ignore_region:
-        if area >= threshold_far:  # Solidity check might be relaxed for far region
-            final_contours.append(contour)
+    # If the contour passed all checks, it's a valid parking space
+    final_contours.append(contour)
 
-# Draw the final contours on the final_img
-cv2.drawContours(contour_img, final_contours, -1, (255), thickness=cv2.FILLED)
+# Draw final contours on a new image
+result_image = np.zeros_like(prob_map, dtype=np.uint8)
+cv2.drawContours(result_image, final_contours, -1, (255), thickness=cv2.FILLED)
 
-# Optionally dilate the contours on the contour_img to make them more visible
-kernel = np.ones((3, 3), np.uint8)
-contour_img_dilated = cv2.dilate(contour_img, kernel, iterations=1)
+# Optionally, convert to BGR if you want to save in color
+result_image_bgr = cv2.cvtColor(result_image, cv2.COLOR_GRAY2BGR)
 
-# Convert the contour_img to a 3-channel BGR image for coloring
-contour_img_bgr = cv2.cvtColor(contour_img_dilated, cv2.COLOR_GRAY2BGR)
-
-# Color the contour areas in green on the contour_img_bgr
-b, g, r = cv2.split(contour_img_bgr)
-g[contour_img_bgr[:,:,0] == 255] = 255
-contour_img_colored = cv2.merge((b, g, r))
-empty_spaces = len(final_contours)  # final_contours are your filtered parking space contours
-output_path = 'Assets/ParkingSpaces/parking_spaces.png'
 # Save the result
-if cv2.imwrite(output_path, contour_img_colored):
-    print(f"Parking spaces detected and saved successfully to {output_path}")
-else:
-    print(f"Failed to save the parking spaces. Check the output path: {output_path}")
-
+cv2.imwrite(processed_image_path, result_image_bgr)
 
 
 # %% overlay on original image 
@@ -434,7 +450,7 @@ original_image_path = 'Assets/SegmentedImages/video_0_frame0.png'  # Path to you
 original_image = cv2.imread(original_image_path, cv2.IMREAD_COLOR)
 
 # Load the processed image with parking spaces in green
-processed_image_path = 'Assets/ParkingSpaces/parking_spaces.png'  # Path to your processed image
+processed_image_path = 'Assets/ParkingSpaces/processed_image.png'  # Path to your processed image
 processed_image = cv2.imread(processed_image_path, cv2.IMREAD_GRAYSCALE)
 
 # Find contours in the processed image
@@ -449,6 +465,7 @@ for contour in contours:
 
 # Create a window to display the result
 window_title = f"Empty Parking Spaces: {number_of_empty_spaces}"
+cv2.putText(original_image, f"Empty Parking Spaces: {number_of_empty_spaces}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 cv2.namedWindow(window_title, cv2.WINDOW_AUTOSIZE)
 cv2.imshow(window_title, original_image)
 cv2.waitKey(0)
