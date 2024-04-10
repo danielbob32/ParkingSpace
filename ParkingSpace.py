@@ -574,6 +574,44 @@ cv2.imwrite(processed_image_path, labeled_image_bgr)
 cv2.imshow('Labeled Image', labeled_image_bgr)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+# Define the maximum width for a single parking space
+max_width_single_space = 100
+# Define the gap you want to leave between split contours
+split_gap = 10
+
+# Create a copy of the result_image for labeling
+labeled_image = np.zeros_like(result_image, dtype=np.uint8)
+labeled_image_bgr = cv2.cvtColor(labeled_image, cv2.COLOR_GRAY2BGR)  # Convert to BGR for colored labels
+
+# Define font scale and thickness for labels
+font_scale = 0.5
+font_thickness = 2
+
+for i, contour in enumerate(final_contours):
+    x, y, w, h = cv2.boundingRect(contour)
+    if w > max_width_single_space:
+        # If contour is wider than the maximum width for a single space, label as multiple spaces
+        num_spaces = int(np.ceil(w / (max_width_single_space + split_gap)))
+        space_width = int((w - (num_spaces - 1) * split_gap) / num_spaces)
+        for j in range(num_spaces):
+            space_x = x + j * (space_width + split_gap)
+            cv2.rectangle(labeled_image_bgr, (space_x, y), (space_x + space_width, y + h), (0, 255, 0), 2)
+            label = f"{i + 1}-{j + 1}"
+            cv2.putText(labeled_image_bgr, label, (space_x + space_width // 2, y + h // 2), 
+                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, font_thickness)
+    else:
+        # If contour width is within the maximum width for a single space, label as one space
+        cv2.rectangle(labeled_image_bgr, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        label = str(i + 1)
+        cv2.putText(labeled_image_bgr, label, (x + w // 2, y + h // 2), 
+                    cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, font_thickness)
+
+# Save or display the labeled_image as needed
+cv2.imwrite(processed_image_path, labeled_image_bgr)
+# or display it
+cv2.imshow('Labeled Image', labeled_image_bgr)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 ####
 #Color the result image contours in green
 result_image_bgr = cv2.cvtColor(result_image, cv2.COLOR_GRAY2BGR)
