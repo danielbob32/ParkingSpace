@@ -23,9 +23,10 @@ def get_contour_center(contour):
         return (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
     return None
 
-# Functions to save and load regions
-def save_regions_to_file(near_region, far_region, ignore_regions, file_path='regions.json'):
-    data = {'near_region': near_region.tolist(), 'far_region': far_region.tolist(), 'ignore_regions': [region.tolist() for region in ignore_regions]}
+#Functions to save and load regions
+def save_regions_to_file(upper_level, close_perp,far_side,close_side,far_perp,small_park, ignore_regions, file_path='regions.json'):
+    data = {'upper_level': upper_level.tolist(), 'close_perp': close_perp.tolist(), 'far_side': far_side.tolist(), 'close_side':
+             close_side.tolist(), 'far_perp': far_perp.tolist(),'small_park': small_park.tolist(), 'ignore_regions': [region.tolist() for region in ignore_regions]}
     with open(file_path, 'w') as file:
         json.dump(data, file)
 
@@ -34,8 +35,12 @@ def load_regions_from_file(file_path='regions.json'):
     with open(file_path, 'r') as file:
         data = json.load(file)
     return (
-        np.array(data['near_region']), 
-        np.array(data['far_region']), 
+        np.array(data['upper_level']), 
+        np.array(data['close_perp']), 
+         np.array(data['far_side']), 
+        np.array(data['close_side']), 
+         np.array(data['far_perp']), 
+        np.array(data['small_park']), 
         [np.array(region) for region in data['ignore_regions']]
     )
 
@@ -253,7 +258,7 @@ else:
 
 # %% detect parking spaces
 prob_map_path = 'Assets/ProbMap/probability_map.png'
-hsv_mask_file = 'Assets/MaskOutputs/video_0_frame0_mask.png'
+hsv_mask_file = 'Assets/MaskOutputs/video_11_frame1800_mask.png'
 output_dir = 'Assets/ParkingSpaces'
 output_path = os.path.join(output_dir, 'parking_spaces.png')
 
@@ -335,17 +340,46 @@ cv2.setMouseCallback('image', click_event)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-near_region = np.array(coords[:4], dtype=np.int32)
-far_region = np.array(coords[4:8], dtype=np.int32)
-ignore_regions = [np.array(coords[8:], dtype=np.int32)] 
-save_regions_to_file(near_region, far_region, ignore_regions)
+upper_level = np.array(coords[:8], dtype=np.int32)
+close_perp = np.array(coords[8:16], dtype=np.int32)
+far_side = np.array(coords[16:24], dtype=np.int32)
+close_side = np.array(coords[24:32], dtype=np.int32)
+far_perp = np.array(coords[32:40], dtype=np.int32)
+# Optionally, perform dilation to restore the general shape of the contours
+small_park = np.array(coords[40:48], dtype=np.int32)
+ignore_regions = [np.array(coords[48:], dtype=np.int32)] 
+save_regions_to_file(upper_level, close_perp,far_side,close_side,far_perp,small_park, ignore_regions)
+
+#%% plot regions on parkingspaces.png
+# Load regions from file
+upper_level, close_perp,far_side,close_side,far_perp,small_park, ignore_regions = load_regions_from_file()
+
+# Load the image with parking spaces
+parking_spaces_path = 'Assets/ProbMap/probability_map.png'
+parking_spaces = cv2.imread(parking_spaces_path, cv2.IMREAD_COLOR)
+
+# Draw the regions on the image
+cv2.polylines(parking_spaces, [upper_level], isClosed=True, color=(0, 255, 0), thickness=2)
+cv2.polylines(parking_spaces, [close_perp], isClosed=True, color=(0, 255, 0), thickness=2)
+cv2.polylines(parking_spaces, [far_side], isClosed=True, color=(0, 255, 0), thickness=2)
+cv2.polylines(parking_spaces, [close_side], isClosed=True, color=(0, 255, 0), thickness=2)
+cv2.polylines(parking_spaces, [far_perp], isClosed=True, color=(0, 255, 0), thickness=2)
+cv2.polylines(parking_spaces, [small_park], isClosed=True, color=(0, 255, 0), thickness=2)
+for region in ignore_regions:
+    cv2.polylines(parking_spaces, [region], isClosed=True, color=(0, 0, 255), thickness=2)
+
+# Display the image with regions
+cv2.imshow('Parking Spaces with Regions', parking_spaces)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
 
 
 
 # %% Process image
-near_region, far_region, ignore_regions = load_regions_from_file()
+upper_level, close_perp,far_side,close_side,far_perp,small_park, ignore_regions = load_regions_from_file()
 prob_map_path = 'Assets/ProbMap/probability_map.png'
-hsv_mask_file = 'Assets/MaskOutputs/video_0_frame0_mask.png'
+hsv_mask_file = 'Assets/MaskOutputs/video_2_frame14400_mask.png'
 processed_image_path = 'Assets/ParkingSpaces/processed_image.png'
 
 # Load the probability map
@@ -362,33 +396,81 @@ prob_map_combined = cv2.bitwise_and(prob_map, prob_map, mask=mask_img_inv)
 _, binary_map = cv2.threshold(prob_map_combined, 80, 255, cv2.THRESH_BINARY)
 
 # Define kernel size for morphological operations to separate close contours
-kernel_size = 4 # This may need to be adjusted based on your specific contours
+kernel_size = 2 # This may need to be adjusted based on your specific contours
 kernel = np.ones((kernel_size, kernel_size), np.uint8)
 
 # Perform erosion to separate contours that are very close together
-eroded_image = cv2.erode(binary_map, kernel, iterations=1)
+eroded_image = cv2.erode(binary_map, kernel, iterations=6)
 
-# Optionally, perform dilation to restore the general shape of the contours
 # dilated_image = cv2.dilate(eroded_image, kernel, iterations=1)
 
 # Now find contours on the eroded (and optionally dilated) image
 contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+# Initialize an index for labeling the contours
+contour_index = 0
+
+# Define a color for the text, e.g., white
+text_color = (255, 255, 255)
 
 
 # Define thresholds for near and far regions separately
 thresholds = {
-    'near_region': {
-        'min_area': 11000,  # example threshold values for near region, adjust as necessary
-        'max_aspect_ratio': 4,
-        'min_solidity': 0.8,
-    },
-    'far_region': {
-        'min_area': 1000,   # example threshold values for far region, adjust as necessary
-        'max_aspect_ratio': 4,
-        'min_solidity': 0.5,
+        'upper_level': {
+            'min_area': 2000,
+            'max_aspect_ratio': 16,
+            'min_solidity': 0.7,
+            'min_width': 120,  
+            'max_width': 700, 
+            'min_height': 50, 
+            'max_height': 300 
+        },
+        'close_perp': {
+            'min_area': 100,
+            'max_aspect_ratio': 5,
+            'min_solidity': 0.6,
+            'min_width': 30, 
+            'max_width': 100,
+            'min_height': 30,
+            'max_height': 100 
+        },
+        'far_side': {
+            'min_area': 100,
+            'max_aspect_ratio': 5,
+            'min_solidity': 0.7,
+            'min_width': 70, 
+            'max_width': 200, 
+            'min_height': 30, 
+            'max_height': 200 
+        },
+        'close_side': {
+            'min_area': 100,
+            'max_aspect_ratio': 5,
+            'min_solidity': 0.6,
+            'min_width': 30, 
+            'max_width': 200, #
+            'min_height': 30, 
+            'max_height': 200 
+        },
+        'far_perp': {
+            'min_area': 100,
+            'max_aspect_ratio': 5,
+            'min_solidity': 0.7,
+            'min_width': 30,
+            'max_width': 200, 
+            'min_height': 30, 
+            'max_height': 200 
+        },
+        'small_park': {
+            'min_area': 200,
+            'max_aspect_ratio': 2,
+            'min_solidity': 0.9,
+            'min_width': 30, 
+            'max_width': 200, 
+            'min_height': 30, 
+            'max_height': 200
+        }
     }
-}
 
 final_contours = []
 for contour in contours:
@@ -403,19 +485,36 @@ for contour in contours:
     area = cv2.contourArea(contour)
 
     # Check which region the contour center point is in
-    if cv2.pointPolygonTest(near_region, center, False) >= 0:
-        region_thresholds = thresholds['near_region']
-    elif cv2.pointPolygonTest(far_region, center, False) >= 0:
-        region_thresholds = thresholds['far_region']
-    else:
-        continue  # if it's not in any region, skip it
+    if cv2.pointPolygonTest(upper_level, center, False) >= 0:
+        region_thresholds = thresholds['upper_level']
+    elif cv2.pointPolygonTest(close_perp, center, False) >= 0:
+        region_thresholds = thresholds['close_perp']
+    elif cv2.pointPolygonTest(far_side, center, False) >= 0:
+        region_thresholds = thresholds['far_side']
+    elif cv2.pointPolygonTest(close_side, center, False) >= 0:
+        region_thresholds = thresholds['close_side']
+    elif cv2.pointPolygonTest(far_perp, center, False) >= 0:
+        region_thresholds = thresholds['far_perp']
+    elif cv2.pointPolygonTest(small_park, center, False) >= 0:
+        region_thresholds = thresholds['small_park']
+    # Calculate solidity
+    hull = cv2.convexHull(contour)
+    hull_area = cv2.contourArea(hull)
+    solidity = area / hull_area if hull_area > 0 else 0
 
     # Apply thresholds based on the region
-    if area < region_thresholds['min_area']:
+    if area < region_thresholds['min_area'] and solidity < region_thresholds['min_solidity']:
         continue
 
     # Calculate bounding rect and aspect ratio
     x, y, w, h = cv2.boundingRect(contour)
+    
+
+    # Check if contour dimensions are within the specified range for the region
+    if not (region_thresholds['min_width'] <= w <= region_thresholds['max_width'] and
+            region_thresholds['min_height'] <= h <= region_thresholds['max_height']):
+        continue  # Skip contour if it doesn't meet size constraints
+
     aspect_ratio = max(w, h) / min(w, h) if min(w, h) > 0 else max(w, h)
 
     if aspect_ratio > region_thresholds['max_aspect_ratio']:
@@ -431,7 +530,6 @@ for contour in contours:
 
     # If the contour passed all checks, it's a valid parking space
     final_contours.append(contour)
-
 # Draw final contours on a new image
 result_image = np.zeros_like(prob_map, dtype=np.uint8)
 cv2.drawContours(result_image, final_contours, -1, (255), thickness=cv2.FILLED)
@@ -441,38 +539,164 @@ result_image_bgr = cv2.cvtColor(result_image, cv2.COLOR_GRAY2BGR)
 
 # Save the result
 cv2.imwrite(processed_image_path, result_image_bgr)
+####
+# Create a copy of the result_image for labeling
+labeled_image = np.zeros_like(result_image, dtype=np.uint8)
+labeled_image_bgr = cv2.cvtColor(labeled_image, cv2.COLOR_GRAY2BGR)  # Convert to BGR for colored labels
 
+# Define font scale and thickness for labels
+font_scale = 0.5
+font_thickness = 2
 
-# %% overlay on original image 
+for i, contour in enumerate(final_contours):
+    # Draw the contour onto the labeled image
+    cv2.drawContours(labeled_image_bgr, [contour], -1, (0, 255, 0), thickness=cv2.FILLED)
+    
+    # Create a label for each contour (e.g., "1", "2", "3", ...)
+    label = str(i + 1)
+    
+    # Calculate the center of the contour for placing the label
+    M = cv2.moments(contour)
+    if M["m00"] != 0:
+        cX = int(M["m10"] / M["m00"])
+        cY = int(M["m01"] / M["m00"])
+    else:
+        # If the contour is too small, you might want to set a default position
+        cX, cY = 0, 0
+    
+    # Place the text at the center of the contour
+    cv2.putText(labeled_image_bgr, label, (cX, cY), 
+                cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 255), font_thickness)
 
-# Load the original image where you want to overlay the parking spots
-original_image_path = 'Assets/SegmentedImages/video_0_frame0.png'  # Path to your base image
-original_image = cv2.imread(original_image_path, cv2.IMREAD_COLOR)
+# Save or display the labeled_image as needed
+cv2.imwrite(processed_image_path, labeled_image_bgr)
+# or display it
+cv2.imshow('Labeled Image', labeled_image_bgr)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+####
+#Color the result image contours in green
+result_image_bgr = cv2.cvtColor(result_image, cv2.COLOR_GRAY2BGR)
+result_image_bgr[np.where((result_image_bgr == [255, 255, 255]).all(axis=2))] = [0, 255, 0]
 
-# Load the processed image with parking spaces in green
-processed_image_path = 'Assets/ParkingSpaces/processed_image.png'  # Path to your processed image
-processed_image = cv2.imread(processed_image_path, cv2.IMREAD_GRAYSCALE)
+# Load the HSV mask image
+hsv_mask = cv2.imread(hsv_mask_file, cv2.IMREAD_COLOR)
 
-# Find contours in the processed image
-contours, _ = cv2.findContours(processed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+# Overlay the result image on top of the HSV mask
+overlay_image = cv2.addWeighted(hsv_mask, 0.7, result_image_bgr, 0.3, 0)
 
-# Calculate the number of empty spaces
-number_of_empty_spaces = len(contours)
+# Display the overlay image
+cv2.imshow('Overlay Image', overlay_image)
 
-# Draw the contours on the original image
-for contour in contours:
-    cv2.drawContours(original_image, [contour], -1, (0, 255, 0), thickness=cv2.FILLED)
-
-# Create a window to display the result
-window_title = f"Empty Parking Spaces: {number_of_empty_spaces}"
-cv2.putText(original_image, f"Empty Parking Spaces: {number_of_empty_spaces}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-cv2.namedWindow(window_title, cv2.WINDOW_AUTOSIZE)
-cv2.imshow(window_title, original_image)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-# Save the original image with parking spots overlaid
-overlay_image_path = 'Assets/SegmentedImages/video_0_frame0_with_overlay.png'  # Path to save overlay image
-cv2.imwrite(overlay_image_path, original_image)# %%
 
+# %% real time app
+#Load regions and thresholds from file
+near_region, far_region, ignore_regions = load_regions_from_file()
+
+# Define thresholds for near and far regions separately
+thresholds = {
+    'near_region': {
+        'min_area': 11000,
+        'max_aspect_ratio': 4,
+        'min_solidity': 0.8,
+    },
+    'far_region': {
+        'min_area': 1000,
+        'max_aspect_ratio': 4,
+        'min_solidity': 0.5,
+    }
+}
+
+# %% Real-time processing of RTSP video stream
+rtsp_stream_url = 'rtsp://admin:GLYYSR@192.168.68.111:554/H.264'  # Replace with your RTSP stream URL
+cap = cv2.VideoCapture(rtsp_stream_url)
+refresh_rate = 90  # The number of frames to wait before refreshing the count (30fps * 3 seconds)
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break  # Exit if the video stream ends or there is an error
+
+    # Convert to grayscale and threshold as before
+    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    _, binary_map = cv2.threshold(gray_frame, 80, 255, cv2.THRESH_BINARY)
+    
+    # Erosion to separate close contours (adjust kernel size and iterations as needed)
+    kernel_size = 4
+    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    eroded_image = cv2.erode(binary_map, kernel, iterations=1)
+
+    # Find contours on the eroded image
+    contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Process contours based on region-specific thresholds
+    final_contours = []
+    for contour in contours:
+        center = get_contour_center(contour)
+        if center is None:
+            continue
+
+        # Skip contours in ignore regions
+        if any(cv2.pointPolygonTest(region, center, False) >= 0 for region in ignore_regions):
+            continue
+
+        area = cv2.contourArea(contour)
+
+        # Check which region the contour center point is in
+        if cv2.pointPolygonTest(near_region, center, False) >= 0:
+            region_thresholds = thresholds['near_region']
+        elif cv2.pointPolygonTest(far_region, center, False) >= 0:
+            region_thresholds = thresholds['far_region']
+        else:
+            continue  # if it's not in any region, skip it
+
+        # Apply thresholds based on the region
+        if area < region_thresholds['min_area']:
+            continue
+
+        # Calculate bounding rect and aspect ratio
+        x, y, w, h = cv2.boundingRect(contour)
+        aspect_ratio = max(w, h) / min(w, h) if min(w, h) > 0 else max(w, h)
+
+        if aspect_ratio > region_thresholds['max_aspect_ratio']:
+            continue
+
+        # Calculate solidity
+        hull = cv2.convexHull(contour)
+        hull_area = cv2.contourArea(hull)
+        solidity = area / hull_area if hull_area > 0 else 0
+
+        if solidity < region_thresholds['min_solidity']:
+            continue
+
+        # If the contour passed all checks, it's a valid parking space
+        final_contours.append(contour)
+
+    # Draw the final contours on the original frame
+    for contour in final_contours:
+        cv2.drawContours(frame, [contour], -1, (0, 255, 0), thickness=cv2.FILLED)
+
+    # Calculate the number of empty spaces and display on the frame
+    number_of_empty_spaces = len(final_contours)
+    cv2.putText(frame, f"Empty Parking Spaces: {number_of_empty_spaces}", (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+    # Display the frame
+    cv2.imshow("Parking Space Counter", frame)
+
+    # Break the loop when 'q' is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+    # Refresh rate control
+    for _ in range(refresh_rate - 1):
+        if not cap.grab():
+            break
+
+# Release the capture and close any OpenCV windows
+cap.release()
+cv2.destroyAllWindows()
 # %%
