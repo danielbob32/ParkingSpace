@@ -51,6 +51,7 @@ def load_regions_from_file(file_path='regions.json'):
 upper_level_l,upper_level_m,upper_level_r, close_perp,far_side,close_side,far_perp,small_park, ignore_regions = load_regions_from_file()
 prob_map_path = 'Assets/ProbMap/probability_map.png'
 hsv_mask_file = 'Assets/MaskOutputs/video_2_frame14400_mask.png'
+#hsv_mask_file = 'Assets/MaskOutputs/video_238_frame21600_mask.png'
 processed_image_path = 'Assets/ParkingSpaces/processed_image.png'
 
 # Load the probability map
@@ -67,7 +68,7 @@ prob_map_combined = cv2.bitwise_and(prob_map, prob_map, mask=mask_img_inv)
 _, binary_map = cv2.threshold(prob_map_combined, 80, 255, cv2.THRESH_BINARY)
 
 # Define kernel size for morphological operations to separate close contours
-kernel_size = 2 # This may need to be adjusted based on your specific contours
+kernel_size = 5 # This may need to be adjusted based on your specific contours
 kernel = np.ones((kernel_size, kernel_size), np.uint8)
 
 # Perform erosion to separate contours that are very close together
@@ -91,17 +92,17 @@ thresholds = {
             'min_area': 2000,
             'max_aspect_ratio': 16,
             'min_solidity': 0.7,
-            'min_width': 120,  
-            'max_width': 700, 
-            'min_height': 50, 
+            'min_width': 60,  
+            'max_width': 500, 
+            'min_height': 0, 
             'max_height': 300 
         },
         'upper_level_m': {
             'min_area': 2000,
             'max_aspect_ratio': 16,
             'min_solidity': 0.7,
-            'min_width': 120,  
-            'max_width': 700, 
+            'min_width': 100,  
+            'max_width': 1050, 
             'min_height': 50, 
             'max_height': 300 
         },
@@ -109,18 +110,18 @@ thresholds = {
             'min_area': 2000,
             'max_aspect_ratio': 16,
             'min_solidity': 0.7,
-            'min_width': 120,  
-            'max_width': 700, 
-            'min_height': 50, 
-            'max_height': 300 
+            'min_width': 110,  
+            'max_width': 500, 
+            'min_height':50, 
+            'max_height': 150 
         },
         'close_perp': {
             'min_area': 100,
             'max_aspect_ratio': 5,
             'min_solidity': 0.6,
-            'min_width': 30, 
+            'min_width': 10, 
             'max_width': 100,
-            'min_height': 30,
+            'min_height': 10,
             'max_height': 100 
         },
         'far_side': {
@@ -159,7 +160,7 @@ thresholds = {
             'min_height': 30, 
             'max_height': 200
         }
-    }
+    }       
 
 final_contours = []
 for contour in contours:
@@ -174,8 +175,12 @@ for contour in contours:
     area = cv2.contourArea(contour)
 
     # Check which region the contour center point is in
-    if cv2.pointPolygonTest(upper_level, center, False) >= 0:
-        region_thresholds = thresholds['upper_level']
+    if cv2.pointPolygonTest(upper_level_l, center, False) >= 0:
+        region_thresholds = thresholds['upper_level_l']
+    elif cv2.pointPolygonTest(upper_level_m, center, False) >= 0:
+        region_thresholds = thresholds['upper_level_m']
+    elif cv2.pointPolygonTest(upper_level_r, center, False) >= 0:
+        region_thresholds = thresholds['upper_level_r']
     elif cv2.pointPolygonTest(close_perp, center, False) >= 0:
         region_thresholds = thresholds['close_perp']
     elif cv2.pointPolygonTest(far_side, center, False) >= 0:
@@ -237,6 +242,11 @@ labeled_image_bgr = cv2.cvtColor(labeled_image, cv2.COLOR_GRAY2BGR)  # Convert t
 font_scale = 0.5
 font_thickness = 2
 
+# Define parking space size parameters
+min_width_single_space = 60  # Minimum width to be considered a single space
+avg_width_space = 175  # Average width of a parking space
+min_sum_split = 200  # Minimum sum width to consider splitting into two
+
 for i, contour in enumerate(final_contours):
     # Draw the contour onto the labeled image
     cv2.drawContours(labeled_image_bgr, [contour], -1, (0, 255, 0), thickness=cv2.FILLED)
@@ -263,7 +273,7 @@ cv2.imwrite(processed_image_path, labeled_image_bgr)
 cv2.imshow('Labeled Image', labeled_image_bgr)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-## %% in develepment - parking spaces divider
+# %% in develepment - parking spaces divider
 max_width_single_space = 100
 # Define the gap you want to leave between split contours
 split_gap = 10
@@ -276,24 +286,41 @@ labeled_image_bgr = cv2.cvtColor(labeled_image, cv2.COLOR_GRAY2BGR)  # Convert t
 font_scale = 0.5
 font_thickness = 2
 
+# Define parking space size parameters
+min_width_single_space = 60  # Minimum width to be considered a single space
+avg_width_space = 175  # Average width of a parking space
+min_sum_split = 200  # Minimum sum width to consider splitting into two
+
 for i, contour in enumerate(final_contours):
     x, y, w, h = cv2.boundingRect(contour)
-    if w > max_width_single_space:
-        # If contour is wider than the maximum width for a single space, label as multiple spaces
-        num_spaces = int(np.ceil(w / (max_width_single_space + split_gap)))
-        space_width = int((w - (num_spaces - 1) * split_gap) / num_spaces)
+
+    if w > avg_width_space:
+        num_spaces = w // avg_width_space
+
+        # Check if the remaining width is enough to consider another space
+        if w % avg_width_space >= min_width_single_space:
+            num_spaces += 1
+
+        space_width = w / num_spaces
+
         for j in range(num_spaces):
-            space_x = x + j * (space_width + split_gap)
-            cv2.rectangle(labeled_image_bgr, (space_x, y), (space_x + space_width, y + h), (0, 255, 0), 2)
+            space_x = x + j * space_width
+
+            # Adjust the width of the last space if necessary
+            last_space_width = space_width if j < num_spaces - 1 else w - space_x + x
+
+            # Draw and label each divided space
+            cv2.rectangle(labeled_image_bgr, (int(space_x), y), (int(space_x + last_space_width), y + h), (0, 255, 0), 2)
             label = f"{i + 1}-{j + 1}"
-            cv2.putText(labeled_image_bgr, label, (space_x + space_width // 2, y + h // 2), 
+            cv2.putText(labeled_image_bgr, label, (int(space_x + last_space_width // 2), y + h // 2), 
                         cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, font_thickness)
     else:
-        # If contour width is within the maximum width for a single space, label as one space
+        # Handle single parking space
         cv2.rectangle(labeled_image_bgr, (x, y), (x + w, y + h), (0, 255, 0), 2)
         label = str(i + 1)
         cv2.putText(labeled_image_bgr, label, (x + w // 2, y + h // 2), 
                     cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, font_thickness)
+
 
 # Save or display the labeled_image as needed
 cv2.imwrite(processed_image_path, labeled_image_bgr)
@@ -302,7 +329,7 @@ cv2.imshow('Labeled Image', labeled_image_bgr)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-## %% Color the result image contours in green
+# %% Color the result image contours in green
 result_image_bgr = cv2.cvtColor(result_image, cv2.COLOR_GRAY2BGR)
 result_image_bgr[np.where((result_image_bgr == [255, 255, 255]).all(axis=2))] = [0, 255, 0]
 
@@ -625,21 +652,83 @@ cv2.destroyAllWindows()
 # %% real time app
 ## %% Real-time processing of RTSP video stream
 #Load regions and thresholds from file
-near_region, far_region, ignore_regions = load_regions_from_file()
+upper_level_l,upper_level_m,upper_level_r, close_perp,far_side,close_side,far_perp,small_park, ignore_regions = load_regions_from_file()
 
 # Define thresholds for near and far regions separately
 thresholds = {
-    'near_region': {
-        'min_area': 11000,
-        'max_aspect_ratio': 4,
-        'min_solidity': 0.8,
-    },
-    'far_region': {
-        'min_area': 1000,
-        'max_aspect_ratio': 4,
-        'min_solidity': 0.5,
+        'upper_level_l': {
+            'min_area': 2000,
+            'max_aspect_ratio': 16,
+            'min_solidity': 0.7,
+            'min_width': 120,  
+            'max_width': 700, 
+            'min_height': 50, 
+            'max_height': 300 
+        },
+        'upper_level_m': {
+            'min_area': 2000,
+            'max_aspect_ratio': 16,
+            'min_solidity': 0.7,
+            'min_width': 120,  
+            'max_width': 700, 
+            'min_height': 50, 
+            'max_height': 300 
+        },
+        'upper_level_r': {
+            'min_area': 2000,
+            'max_aspect_ratio': 16,
+            'min_solidity': 0.7,
+            'min_width': 120,  
+            'max_width': 700, 
+            'min_height': 50, 
+            'max_height': 300 
+        },
+        'close_perp': {
+            'min_area': 100,
+            'max_aspect_ratio': 5,
+            'min_solidity': 0.6,
+            'min_width': 30, 
+            'max_width': 100,
+            'min_height': 30,
+            'max_height': 100 
+        },
+        'far_side': {
+            'min_area': 100,
+            'max_aspect_ratio': 5,
+            'min_solidity': 0.7,
+            'min_width': 70, 
+            'max_width': 200, 
+            'min_height': 30, 
+            'max_height': 200 
+        },
+        'close_side': {
+            'min_area': 100,
+            'max_aspect_ratio': 5,
+            'min_solidity': 0.6,
+            'min_width': 30, 
+            'max_width': 200, #
+            'min_height': 30, 
+            'max_height': 200 
+        },
+        'far_perp': {
+            'min_area': 100,
+            'max_aspect_ratio': 5,
+            'min_solidity': 0.7,
+            'min_width': 30,
+            'max_width': 200, 
+            'min_height': 30, 
+            'max_height': 200 
+        },
+        'small_park': {
+            'min_area': 200,
+            'max_aspect_ratio': 2,
+            'min_solidity': 0.9,
+            'min_width': 30, 
+            'max_width': 200, 
+            'min_height': 30, 
+            'max_height': 200
+        }
     }
-}
 rtsp_stream_url = 'rtsp://admin:GLYYSR@192.168.68.111:554/H.264'  # Replace with your RTSP stream URL
 cap = cv2.VideoCapture(rtsp_stream_url)
 refresh_rate = 90  # The number of frames to wait before refreshing the count (30fps * 3 seconds)
@@ -675,10 +764,10 @@ while True:
         area = cv2.contourArea(contour)
 
         # Check which region the contour center point is in
-        if cv2.pointPolygonTest(near_region, center, False) >= 0:
-            region_thresholds = thresholds['near_region']
-        elif cv2.pointPolygonTest(far_region, center, False) >= 0:
-            region_thresholds = thresholds['far_region']
+        if cv2.pointPolygonTest(upper_level_m, center, False) >= 0:
+            region_thresholds = thresholds['upper_level_m']
+        elif cv2.pointPolygonTest(far_perp, center, False) >= 0:
+            region_thresholds = thresholds['far_perp']
         else:
             continue  # if it's not in any region, skip it
 
@@ -728,3 +817,5 @@ while True:
 # Release the capture and close any OpenCV windows
 cap.release()
 cv2.destroyAllWindows()
+
+# %%
