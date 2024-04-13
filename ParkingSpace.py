@@ -234,6 +234,10 @@ result_image_bgr = cv2.cvtColor(result_image, cv2.COLOR_GRAY2BGR)
 # Save the result
 cv2.imwrite(processed_image_path, result_image_bgr)
 
+max_width_single_space = 100
+# Define the gap you want to leave between split contours
+split_gap = 10
+
 # Create a copy of the result_image for labeling
 labeled_image = np.zeros_like(result_image, dtype=np.uint8)
 labeled_image_bgr = cv2.cvtColor(labeled_image, cv2.COLOR_GRAY2BGR)  # Convert to BGR for colored labels
@@ -248,24 +252,35 @@ avg_width_space = 175  # Average width of a parking space
 min_sum_split = 200  # Minimum sum width to consider splitting into two
 
 for i, contour in enumerate(final_contours):
-    # Draw the contour onto the labeled image
-    cv2.drawContours(labeled_image_bgr, [contour], -1, (0, 255, 0), thickness=cv2.FILLED)
-    
-    # Create a label for each contour (e.g., "1", "2", "3", ...)
-    label = str(i + 1)
-    
-    # Calculate the center of the contour for placing the label
-    M = cv2.moments(contour)
-    if M["m00"] != 0:
-        cX = int(M["m10"] / M["m00"])
-        cY = int(M["m01"] / M["m00"])
+    x, y, w, h = cv2.boundingRect(contour)
+
+    if w > avg_width_space:
+        num_spaces = w // avg_width_space
+
+        # Check if the remaining width is enough to consider another space
+        if w % avg_width_space >= min_width_single_space:
+            num_spaces += 1
+
+        space_width = w / num_spaces
+
+        for j in range(num_spaces):
+            space_x = x + j * space_width
+
+            # Adjust the width of the last space if necessary
+            last_space_width = space_width if j < num_spaces - 1 else w - space_x + x
+
+            # Draw and label each divided space
+            cv2.rectangle(labeled_image_bgr, (int(space_x), y), (int(space_x + last_space_width), y + h), (0, 255, 0), 2)
+            label = f"{i + 1}-{j + 1}"
+            cv2.putText(labeled_image_bgr, label, (int(space_x + last_space_width // 2), y + h // 2), 
+                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, font_thickness)
     else:
-        # If the contour is too small, you might want to set a default position
-        cX, cY = 0, 0
-    
-    # Place the text at the center of the contour
-    cv2.putText(labeled_image_bgr, label, (cX, cY), 
-                cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 255), font_thickness)
+        # Handle single parking space
+        cv2.rectangle(labeled_image_bgr, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        label = str(i + 1)
+        cv2.putText(labeled_image_bgr, label, (x + w // 2, y + h // 2), 
+                    cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, font_thickness)
+
 
 # Save or display the labeled_image as needed
 cv2.imwrite(processed_image_path, labeled_image_bgr)
@@ -273,6 +288,7 @@ cv2.imwrite(processed_image_path, labeled_image_bgr)
 cv2.imshow('Labeled Image', labeled_image_bgr)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+
 # %% in develepment - parking spaces divider
 max_width_single_space = 100
 # Define the gap you want to leave between split contours
@@ -494,7 +510,7 @@ for image_file in file_names:
     hsv_mask = cv2.inRange(image_hsv, hsv_lower_range, hsv_upper_range)
     hsv_mask = cv2.morphologyEx(hsv_mask, cv2.MORPH_OPEN, kernel)
     hsv_mask = cv2.morphologyEx(hsv_mask, cv2.MORPH_CLOSE, kernel)
-
+    cv2.imshow('HSV Mask', hsv_mask)    q
     # Save the binary mask
     binary_mask_path = os.path.join(binary_mask_dir, f'{os.path.splitext(image_file)[0]}_mask.png')
     cv2.imwrite(binary_mask_path, hsv_mask)
