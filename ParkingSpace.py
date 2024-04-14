@@ -9,29 +9,30 @@ import time
 import shutil
 import re
 import json
+
 ## %% utility functions
-# Define utility functions
+# Function to extract video and frame number from the file name for sorting
 def extract_video_frame(file_name):
     match = re.match(r'video_(\d+)_frame(\d+)\.png', file_name)
     if match:
         return int(match.group(1)), int(match.group(2))
     else:
         return None
-
+# Funtion to get the center of a contour
 def get_contour_center(contour):
     M = cv2.moments(contour)
     if M["m00"] != 0:
         return (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
     return None
 
-#Functions to save and load regions
+#Function to save and load regions
 def save_regions_to_file(upper_level_l, upper_level_m, upper_level_r, close_perp,far_side,close_side,far_perp,small_park, ignore_regions, file_path='regions.json'):
     data = {'upper_level_l': upper_level_l.tolist(),'upper_level_m': upper_level_m.tolist(),'upper_level_r': upper_level_r.tolist(), 'close_perp': close_perp.tolist(), 'far_side': far_side.tolist(), 'close_side':
              close_side.tolist(), 'far_perp': far_perp.tolist(),'small_park': small_park.tolist(), 'ignore_regions': [region.tolist() for region in ignore_regions]}
     with open(file_path, 'w') as file:
         json.dump(data, file)
 
-
+# Function to load regions from a file
 def load_regions_from_file(file_path='regions.json'):
     with open(file_path, 'r') as file:
         data = json.load(file)
@@ -46,12 +47,12 @@ def load_regions_from_file(file_path='regions.json'):
         np.array(data['small_park']), 
         [np.array(region) for region in data['ignore_regions']]
     )
+
 # %% parking space processing
 ## %% Process image
 upper_level_l,upper_level_m,upper_level_r, close_perp,far_side,close_side,far_perp,small_park, ignore_regions = load_regions_from_file()
 prob_map_path = 'Assets/ProbMap/probability_map.png'
 hsv_mask_file = 'Assets/MaskOutputs/video_2_frame14400_mask.png'
-#hsv_mask_file = 'Assets/MaskOutputs/video_238_frame21600_mask.png'
 processed_image_path = 'Assets/ParkingSpaces/processed_image.png'
 
 # Load the probability map
@@ -74,9 +75,8 @@ kernel = np.ones((kernel_size, kernel_size), np.uint8)
 # Perform erosion to separate contours that are very close together
 eroded_image = cv2.erode(binary_map, kernel, iterations=6)
 
-# dilated_image = cv2.dilate(eroded_image, kernel, iterations=1)
 
-# Now find contours on the eroded (and optionally dilated) image
+# find contours on the eroded image
 contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
 # Initialize an index for labeling the contours
@@ -86,7 +86,7 @@ contour_index = 0
 text_color = (255, 255, 255)
 
 
-# Define thresholds for near and far regions separately
+# Define thresholds for each region
 thresholds = {
         'upper_level_l': {
             'min_area': 2000,
@@ -191,6 +191,7 @@ for contour in contours:
         region_thresholds = thresholds['far_perp']
     elif cv2.pointPolygonTest(small_park, center, False) >= 0:
         region_thresholds = thresholds['small_park']
+
     # Calculate solidity
     hull = cv2.convexHull(contour)
     hull_area = cv2.contourArea(hull)
@@ -289,7 +290,7 @@ cv2.imshow('Labeled Image', labeled_image_bgr)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-# %% in develepment - parking spaces divider
+## %% in develepment - parking spaces divider
 max_width_single_space = 100
 # Define the gap you want to leave between split contours
 split_gap = 10
@@ -305,7 +306,7 @@ font_thickness = 2
 # Define parking space size parameters
 min_width_single_space = 60  # Minimum width to be considered a single space
 avg_width_space = 175  # Average width of a parking space
-min_sum_split = 200  # Minimum sum width to consider splitting into two
+
 
 for i, contour in enumerate(final_contours):
     x, y, w, h = cv2.boundingRect(contour)
@@ -345,7 +346,7 @@ cv2.imshow('Labeled Image', labeled_image_bgr)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-# %% Color the result image contours in green
+## %% Color the result image contours in green
 result_image_bgr = cv2.cvtColor(result_image, cv2.COLOR_GRAY2BGR)
 result_image_bgr[np.where((result_image_bgr == [255, 255, 255]).all(axis=2))] = [0, 255, 0]
 
