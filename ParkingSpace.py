@@ -54,7 +54,7 @@ upper_level_l,upper_level_m,upper_level_r, close_perp,far_side,close_side,far_pe
 prob_map_path = 'Assets/ProbMap/probability_map.png'
 hsv_mask_file = 'Assets/MaskOutputs/video_2_frame14400_mask.png'
 processed_image_path = 'Assets/ParkingSpaces/processed_image.png'
-
+segmented_im_path = 'Assets/SegmentedImages/video_2_frame14400.png'
 # Load the probability map
 prob_map = cv2.imread(prob_map_path, cv2.IMREAD_GRAYSCALE)
 
@@ -350,6 +350,18 @@ cv2.destroyAllWindows()
 result_image_bgr = cv2.cvtColor(result_image, cv2.COLOR_GRAY2BGR)
 result_image_bgr[np.where((result_image_bgr == [255, 255, 255]).all(axis=2))] = [0, 255, 0]
 
+#load segmented image
+segmented_im = cv2.imread(segmented_im_path, cv2.IMREAD_COLOR)
+# Overlay the result image on top of the segmented image
+overlay_image = cv2.addWeighted(segmented_im, 0.7, labeled_image_bgr, 0.3, 0)
+
+# Display the overlay image
+cv2.imshow('Overlay Image', overlay_image)
+cv2.imwrite(processed_image_path, overlay_image)
+
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
 # Load the HSV mask image
 hsv_mask = cv2.imread(hsv_mask_file, cv2.IMREAD_COLOR)
 
@@ -511,7 +523,7 @@ for image_file in file_names:
     hsv_mask = cv2.inRange(image_hsv, hsv_lower_range, hsv_upper_range)
     hsv_mask = cv2.morphologyEx(hsv_mask, cv2.MORPH_OPEN, kernel)
     hsv_mask = cv2.morphologyEx(hsv_mask, cv2.MORPH_CLOSE, kernel)
-    cv2.imshow('HSV Mask', hsv_mask)    q
+    cv2.imshow('HSV Mask', hsv_mask)    
     # Save the binary mask
     binary_mask_path = os.path.join(binary_mask_dir, f'{os.path.splitext(image_file)[0]}_mask.png')
     cv2.imwrite(binary_mask_path, hsv_mask)

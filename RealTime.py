@@ -5,6 +5,8 @@ import json
 from ultralytics import YOLO
 import time
 
+
+
 def get_contour_center(contour):
     M = cv2.moments(contour)
     if M["m00"] != 0:
@@ -128,6 +130,8 @@ def process_frame(frame,prob_map_path,thresholds):
     # Save the result
     cv2.imwrite(processed_image_path, result_image_bgr)
 
+    # Initialize the number of spaces to zero
+    total_spaces = 0
 
     # Create a copy of the result_image for labeling
     labeled_image = np.zeros_like(result_image, dtype=np.uint8)
@@ -138,48 +142,34 @@ def process_frame(frame,prob_map_path,thresholds):
     font_thickness = 2
 
     # Define parking space size parameters
-    min_width_single_space = 60  # Minimum width to be considered a single space
     avg_width_space = 200  # Average width of a parking space that can be splited
  
 
-    for i, contour in enumerate(final_contours):
+    for contour in final_contours:
         x, y, w, h = cv2.boundingRect(contour)
-
         if w > avg_width_space:
-            num_spaces = w // avg_width_space
-
-            # Check if the remaining width is enough to consider another space
-            if w % avg_width_space >= min_width_single_space:
-                num_spaces += 1
-
+            # Calculate the number of individual spaces within the wide contour
+            num_spaces = int(w / avg_width_space)
             space_width = w / num_spaces
 
             for j in range(num_spaces):
                 space_x = x + j * space_width
-
-                # Adjust the width of the last space if necessary
-                last_space_width = space_width if j < num_spaces - 1 else w - space_x + x
-
                 # Draw and label each divided space
-                cv2.rectangle(labeled_image_bgr, (int(space_x), y), (int(space_x + last_space_width), y + h), (0, 255, 0), 2)
-                label = f"{i + 1}-{j + 1}"
-                cv2.putText(labeled_image_bgr, label, (int(space_x + last_space_width // 2), y + h // 2), 
-                            cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, font_thickness)
+                cv2.rectangle(labeled_image_bgr, (int(space_x), y), (int(space_x + space_width), y + h), (0, 255, 0), 2)
+                label = f"{total_spaces + 1}"
+                cv2.putText(labeled_image_bgr, label, (int(space_x + space_width // 2), y + h // 2), 
+                            cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), font_thickness)
+                total_spaces += 1  # Increment the space count for each split
         else:
             # Handle single parking space
             cv2.rectangle(labeled_image_bgr, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            label = str(i + 1)
+            label = str(total_spaces + 1)
             cv2.putText(labeled_image_bgr, label, (x + w // 2, y + h // 2), 
-                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, font_thickness)
+                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), font_thickness)
+            total_spaces += 1  # Increment the space count for single spaces
 
     
-#display the labeled_image as needed
-    #cv2.imshow('Labeled Image', labeled_image_bgr)
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
-
-
-    return labeled_image_bgr,final_contours
+    return labeled_image_bgr, total_spaces
 
 
 
@@ -204,14 +194,6 @@ def load_regions_from_file(file_path='regions.json'):
 
 
 
-# Essentials for model
-model = YOLO('yolov8x-seg.pt')
-processed_image_path = 'Assets/ParkingSpaces/processed_image.png'
-prob_map_path = 'Assets/ProbMap/probability_map.png'
-rtsp_url =  'rtsp url here'
-cap = cv2.VideoCapture(rtsp_url)
-upper_level_l,upper_level_m,upper_level_r, close_perp,far_side,close_side,far_perp,small_park, ignore_regions = load_regions_from_file()
-
 # The thresholds for each region
 thresholds = {
         'upper_level_l': {
@@ -220,7 +202,7 @@ thresholds = {
             'min_solidity': 0.7,
             'min_width': 60,  
             'max_width': 500, 
-            'min_height': 0, 
+            'min_height': 30, 
             'max_height': 300 
         },
         'upper_level_m': {
@@ -238,7 +220,7 @@ thresholds = {
             'min_solidity': 0.7,
             'min_width': 110,  
             'max_width': 500, 
-            'min_height':50, 
+            'min_height':100, #was 50 but diag got detected
             'max_height': 150 
         },
         'close_perp': {
@@ -264,7 +246,7 @@ thresholds = {
             'max_aspect_ratio': 5,
             'min_solidity': 0.6,
             'min_width': 30, 
-            'max_width': 200, #
+            'max_width': 200, 
             'min_height': 30, 
             'max_height': 200 
         },
@@ -289,9 +271,19 @@ thresholds = {
     }   
 
 
-# %% main function for real-time processing
-# Set the interval in seconds
-interval = 1.0  # Process one frame every second
+
+# Essentials for model
+model = YOLO('yolov8x-seg.pt')
+processed_image_path = 'Assets/ParkingSpaces/processed_image.png'
+prob_map_path = 'Assets/ProbMap/probability_map.png'
+rtsp_url = 'Assets/VideoFiles/ch01_00000000000000000.mp4' # used for non stream testing
+cap = cv2.VideoCapture(rtsp_url)
+upper_level_l,upper_level_m,upper_level_r, close_perp,far_side,close_side,far_perp,small_park, ignore_regions = load_regions_from_file()
+
+
+
+#Set the interval in seconds
+interval = 10.0  # Process one frame every second
 
 # Initialize a variable to keep track of the last processed time
 last_time_processed = time.time()
@@ -307,28 +299,26 @@ while True:
         last_time_processed = current_time
 
         # Process the frame using the model
-        result = model(frame, stream=True)
+        result = model(frame,stream=True, conf=0.15,classes=2,imgsz=(1088,1920))
         for r in result:
-            segmented_frame = r.plot()
-
-            # Debug: Visualize the segmentation results by combining with the original frame
-            segmented_overlay = cv2.addWeighted(frame, 0.7, segmented_frame, 0.3, 0)
+            segmented_frame = r.plot(conf=False,boxes=False,masks=True)
+           
+            # frame with segmentation
+            segmented_overlay = cv2.addWeighted(frame, 0.5, segmented_frame, 0.5, 0)
 
             # Process to find empty spaces
-            final_image, final_contours = process_frame(segmented_frame, prob_map_path, thresholds)
-            add_frame = cv2.addWeighted(segmented_overlay, 0.7, final_image, 0.3, 0)  # Use segmented_overlay instead of frame
-
+            parking_space_boxes, number_of_empty_spaces = process_frame(segmented_frame, prob_map_path, thresholds)
+            result_image = cv2.addWeighted(segmented_overlay, 0.5, parking_space_boxes, 0.5, 0)  # Use segmented_overlay instead of frame
+           
             # Display the number of empty parking spaces
-            number_of_empty_spaces = len(final_contours)
-            cv2.putText(add_frame, f"Empty Parking Spaces: {number_of_empty_spaces}", (10, 30),
+            cv2.putText(result_image, f"Empty Parking Spaces: {number_of_empty_spaces}", (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-            cv2.imshow('Final Image', add_frame)
+            
+            cv2.imshow('Final Image', result_image)
             if cv2.waitKey(1) & 0xFF == ord('q'):  # Break loop with 'q' key
                 break
-    else:
-        # Optionally, delay the loop to save CPU resources
-        time.sleep(max(0, interval - (current_time - last_time_processed)))
+
+
 
     # Break loop from the outer loop as well with 'q' key
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -338,3 +328,5 @@ cap.release()
 cv2.destroyAllWindows()
 
 
+
+# %%
