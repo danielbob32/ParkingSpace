@@ -5,17 +5,16 @@ import json
 from ultralytics import YOLO
 import time
 
-
-
+# function to get the center of the contour
 def get_contour_center(contour):
     M = cv2.moments(contour)
     if M["m00"] != 0:
         return (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
     return None
 
+# function to process the given frame
 def process_frame(frame,prob_map_path,thresholds):
-
-    # Define the color range for the orange masks in the HSV color space
+    # Define the color range for the masks in the HSV color space
     hsv_lower_range = np.array([5, 100, 100], dtype=np.uint8)
     hsv_upper_range = np.array([15, 255, 255], dtype=np.uint8)
 
@@ -52,10 +51,7 @@ def process_frame(frame,prob_map_path,thresholds):
     # Now find contours on the eroded image
     contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-
-    # Define a color for the text, e.g., white
-    text_color = (255, 255, 255)  
-
+    # Define the regions for parking spaces
     final_contours = []
     for contour in contours:
         center = get_contour_center(contour)
@@ -104,10 +100,11 @@ def process_frame(frame,prob_map_path,thresholds):
                 region_thresholds['min_height'] <= h <= region_thresholds['max_height']):
             continue  # Skip contour if it doesn't meet size constraints
 
+        # Calculate aspect ratio
         aspect_ratio = max(w, h) / min(w, h) if min(w, h) > 0 else max(w, h)
 
         if aspect_ratio > region_thresholds['max_aspect_ratio']:
-            continue
+            continue # Skip contour if it doesn't meet aspect ratio constraints
 
         # Calculate solidity
         hull = cv2.convexHull(contour)
@@ -115,7 +112,7 @@ def process_frame(frame,prob_map_path,thresholds):
         solidity = area / hull_area if hull_area > 0 else 0
 
         if solidity < region_thresholds['min_solidity']:
-            continue
+            continue # Skip contour if it doesn't meet solidity constraints
 
         # If the contour passed all checks, it's a valid parking space
         final_contours.append(contour)    
@@ -123,12 +120,6 @@ def process_frame(frame,prob_map_path,thresholds):
     # Draw final contours on a new image
     result_image = np.zeros_like(prob_map, dtype=np.uint8)
     cv2.drawContours(result_image, final_contours, -1, (255), thickness=cv2.FILLED)
-
-    #  BGR to save in color
-    result_image_bgr = cv2.cvtColor(result_image, cv2.COLOR_GRAY2BGR)
-    
-    # Save the result
-    cv2.imwrite(processed_image_path, result_image_bgr)
 
     # Initialize the number of spaces to zero
     total_spaces = 0
@@ -144,14 +135,15 @@ def process_frame(frame,prob_map_path,thresholds):
     # Define parking space size parameters
     avg_width_space = 200  # Average width of a parking space that can be splited
  
-
+    # Label each parking space
     for contour in final_contours:
-        x, y, w, h = cv2.boundingRect(contour)
+        x, y, w, h = cv2.boundingRect(contour) # Get the bounding rect for each contour
         if w > avg_width_space:
             # Calculate the number of individual spaces within the wide contour
             num_spaces = int(w / avg_width_space)
             space_width = w / num_spaces
 
+            # Split the wide contour into individual spaces
             for j in range(num_spaces):
                 space_x = x + j * space_width
                 # Draw and label each divided space
@@ -169,13 +161,13 @@ def process_frame(frame,prob_map_path,thresholds):
             total_spaces += 1  # Increment the space count for single spaces
 
     
-    return labeled_image_bgr, total_spaces
+    return labeled_image_bgr, total_spaces # Return the labeled image and the total number of spaces
 
 
 
 
 
-
+# function to load the regions from the pre-made regions.json file
 def load_regions_from_file(file_path='regions.json'):
     with open(file_path, 'r') as file:
         data = json.load(file)
@@ -209,7 +201,7 @@ thresholds = {
             'min_area': 2000,
             'max_aspect_ratio': 16,
             'min_solidity': 0.7,
-            'min_width': 100,  
+            'min_width': 120,  
             'max_width': 1050, 
             'min_height': 50, 
             'max_height': 300 
@@ -220,7 +212,7 @@ thresholds = {
             'min_solidity': 0.7,
             'min_width': 110,  
             'max_width': 500, 
-            'min_height':100, #was 50 but diag got detected
+            'min_height':100, 
             'max_height': 150 
         },
         'close_perp': {
@@ -236,7 +228,7 @@ thresholds = {
             'min_area': 100,
             'max_aspect_ratio': 5,
             'min_solidity': 0.7,
-            'min_width': 70, 
+            'min_width': 30, 
             'max_width': 200, 
             'min_height': 30, 
             'max_height': 200 
@@ -271,15 +263,12 @@ thresholds = {
     }   
 
 
-
 # Essentials for model
-model = YOLO('yolov8x-seg.pt')
-processed_image_path = 'Assets/ParkingSpaces/processed_image.png'
-prob_map_path = 'Assets/ProbMap/probability_map.png'
-rtsp_url = 'Assets/VideoFiles/ch01_00000000000000000.mp4' # used for non stream testing
-cap = cv2.VideoCapture(rtsp_url)
+model = YOLO('yolov8x-seg.pt') # Load the model, can reduced if needed
+prob_map_path = 'Assets/ProbMap/probability_map.png' # Path to the probability map
+video_file = 'Assets/VideoFiles/ch01_00000000064000000.mp4' 
+cap = cv2.VideoCapture(video_file)
 upper_level_l,upper_level_m,upper_level_r, close_perp,far_side,close_side,far_perp,small_park, ignore_regions = load_regions_from_file()
-
 
 
 #Set the interval in seconds
@@ -299,7 +288,7 @@ while True:
         last_time_processed = current_time
 
         # Process the frame using the model
-        result = model(frame,stream=True, conf=0.15,classes=2,imgsz=(1088,1920))
+        result = model(frame,stream=True, conf=0.15,classes=[2,3,7],imgsz=(1088,1920))
         for r in result:
             segmented_frame = r.plot(conf=False,boxes=False,masks=True)
            
@@ -313,11 +302,9 @@ while True:
             # Display the number of empty parking spaces
             cv2.putText(result_image, f"Empty Parking Spaces: {number_of_empty_spaces}", (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            
             cv2.imshow('Final Image', result_image)
             if cv2.waitKey(1) & 0xFF == ord('q'):  # Break loop with 'q' key
                 break
-
 
 
     # Break loop from the outer loop as well with 'q' key
@@ -326,7 +313,4 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
-
-
-
 # %%
