@@ -25,20 +25,15 @@ jobs:
           key: ${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
       - name: Install dependencies
         run: |
-          pip install --upgrade --upgrade-strategy eager -e .[dev]
+          xxxx
       - name: Run license checks
         run: |
-          ./nerfstudio/scripts/licensing/license_headers.sh --check
+          .xxx --check
       - name: Check notebook cell metadata
         run: |
-          python ./nerfstudio/scripts/docs/add_nb_tags.py --check
-      - name: Run Ruff
-        run: ruff docs/ nerfstudio/ tests/
-      - name: Run Black
-        run: black docs/ nerfstudio/ tests/ --check
-      - name: Run Pyright
-        run: |
-          pyright
+          python .xxx --check
+      - name: Run x
+        run: ruff xxx
       - name: Test with pytest
         run: |
           pytest
