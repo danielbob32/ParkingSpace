@@ -22,7 +22,7 @@
 <h1 align="center">Parking Space Detector</h1>
 
   <p align="center">
-    project_description
+    YOLOv8 based parking detecetion system using a RTSP camera,
     <br />
     <br />
     <a href="https://github.com/danielbob32/ParkingSpace">View Demo</a>
@@ -66,24 +66,11 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-### Built With
-
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![Vue][Vue.js]][Vue-url]
-* [![Angular][Angular.io]][Angular-url]
-* [![Svelte][Svelte.dev]][Svelte-url]
-* [![Laravel][Laravel.com]][Laravel-url]
-* [![Bootstrap][Bootstrap.com]][Bootstrap-url]
-* [![JQuery][JQuery.com]][JQuery-url]
+This project was made 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
 
 
 
