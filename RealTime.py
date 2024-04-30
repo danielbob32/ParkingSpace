@@ -266,16 +266,16 @@ thresholds = {
 # Essentials for model
 model = YOLO('yolov8x-seg.pt') # Load the model, can reduced if needed
 prob_map_path = 'Assets/ProbMap/probability_map.png' # Path to the probability map
-video_file = 'Assets/VideoFiles/ch01_00000000064000000.mp4' 
+video_file = 'Assets/VideoFiles/ch01_00000000227000000.mp4' 
 cap = cv2.VideoCapture(video_file)
 upper_level_l,upper_level_m,upper_level_r, close_perp,far_side,close_side,far_perp,small_park, ignore_regions = load_regions_from_file()
 
 
 #Set the interval in seconds
-interval = 10.0  # Process one frame every second
+interval = 15.0  # Process one frame every second
 
 # Initialize a variable to keep track of the last processed time
-last_time_processed = time.time()
+last_time_processed = interval
 
 while True:
     ret, frame = cap.read()
@@ -286,7 +286,6 @@ while True:
     if current_time - last_time_processed >= interval:
         # Update the last processed time
         last_time_processed = current_time
-
         # Process the frame using the model
         result = model(frame,stream=True, conf=0.15,classes=[2,3,7],imgsz=(1088,1920))
         for r in result:
@@ -302,15 +301,40 @@ while True:
             # Display the number of empty parking spaces
             cv2.putText(result_image, f"Empty Parking Spaces: {number_of_empty_spaces}", (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.imshow('Final Image', result_image)
-            if cv2.waitKey(1) & 0xFF == ord('q'):  # Break loop with 'q' key
+            # display the image in small window
+
+            width = 1280
+            height = 720
+            dim = (width, height)
+
+            result_image = cv2.resize(result_image, dim, interpolation=cv2.INTER_AREA)
+
+            cv2.imshow('Parking Spaces', result_image)
+            if cv2.waitKey(1) & 0xFF == ord('q'): 
                 break
 
-
-    # Break loop from the outer loop as well with 'q' key
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 cap.release()
 cv2.destroyAllWindows()
 # %%
+
+
+# Used for single frame processing when using implemneting in an application
+# def process_single_frame(frame, model, prob_map_path, thresholds):
+    
+#     result = model(frame,stream=True, conf=0.15,classes=[2,3,7],imgsz=(1088,1920))
+    
+#     # Assuming `result` is a list and we only process the first one for simplicity
+#     for r in result:
+#         segmented_frame = r.plot(conf=False, boxes=False, masks=True)
+#         segmented_overlay = cv2.addWeighted(frame, 0.5, segmented_frame, 0.5, 0)
+#         parking_space_boxes, number_of_empty_spaces = process_frame(segmented_frame, prob_map_path, thresholds)
+#         result_image = cv2.addWeighted(segmented_overlay, 0.5, parking_space_boxes, 0.5, 0)
+#         cv2.putText(result_image, f"Empty Parking Spaces: {number_of_empty_spaces}", (10, 30),
+#                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+#         return result_image
+    
+#     # If there's no result from the model, return the original frame
+#     return frame
