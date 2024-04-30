@@ -66,7 +66,15 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-This project was made 
+Finding parking spaces has become increasingly challenging in densely populated neighborhoods, where the number of cars is growing rapidly. This task not only frustrates drivers but also contributes to traffic congestion as unsuccessful searches add unnecessary delays to journeys. What if there was a solution that could streamline this process?
+
+Introducing ParkingSpace, a Python-based system leveraging YOLOv8 and real-time streaming protocol (RTSP) cameras to revolutionize parking spot detection. Developed as a project during my computer science degree, under the guidance of Dr. Roi Poranne, ParkingSpace aims to alleviate the parking woes encountered in urban areas.
+
+The Challenge
+In bustling neighborhoods, the hunt for a vacant parking spot can be maddening. It not only consumes valuable time but also exacerbates traffic congestion as drivers circle blocks in search of elusive spaces. This frustration inspired the creation of ParkingSpace, a solution designed to make urban parking more efficient and less stressful.
+
+Our Solution
+By harnessing the power of computer vision and YOLOv8, ParkingSpotter identifies empty parking spaces in real-time, even within undefined parking areas. This innovative algorithm detects available spots, allowing drivers to make informed decisions about where to park without aimless circling. With ParkingSpotter, navigating crowded streets becomes more manageable, reducing congestion and enhancing the overall urban driving experienc 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
