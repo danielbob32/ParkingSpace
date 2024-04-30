@@ -1,5 +1,13 @@
 # ParkingSpaces
 
-## example run
-<video controls src="Assets/README/Exmp.mp4" title="Title"></video>
-![alt text](Exmp-ezgif.com-video-to-gif-converter.gif)
+<p align="center">
+    <!-- pypi-strip -->
+    <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo.gif">
+    
+    <!-- /pypi-strip -->
+    
+    <!-- pypi-strip -->
+    </picture>
+    <!-- /pypi-strip -->
+</p>
