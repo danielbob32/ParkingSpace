@@ -43,9 +43,8 @@
       <a href="#about-the-project">About The Project</a>
     </li>
     <li>
-      <a href="#getting-started">Getting Started</a>
+      <a href="#install-and-setup">Install and Setup</a>
       <ul>
-        <li><a href="#install-and-setup">Install and Setup</a></li>
         <li><a href="#dependencies">Prerequisites</a></li>
         <li><a href="#dependencies">Dependencies</a></li>
         <li><a href="#installation">Installation</a></li>
@@ -157,7 +156,7 @@ _For more options and develpoment, please refer to the [references](#references)
 <!-- ROADMAP -->
 ## Roadmap
 
-- [✅] Add step-by-step template to init the system anywhere.
+- [x] Add step-by-step template to init the system anywhere.
 - [ ] Make a solid web-app version.
 - [ ] Future development:  
     - [ ] Self region assigment system.
