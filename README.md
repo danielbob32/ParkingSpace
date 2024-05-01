@@ -206,7 +206,19 @@ Project Link: [https://github.com/danielbob32/ParkingSpace](https://github.com/d
 
 <!-- LEARN MORE -->
 ## Learn More
-
+If you are interested in learning more about how to apply ParkingSpace to your use, develop and more, please check the quicklinks below.
+| Section                                                                                            | Description                                                                                        |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 🏃 **How To's**                                                                                   |
+| [Home Setup]()                                                                                     | Here will be an in-depth guide on how to setup a home system.                                       |
+| [How to Record the data]()                                                                         | Here will be a quick guide on how to acquire your own data.                                         |
+| 💻 **Developers**                                                                                  |
+| [Traning the system]()                                                                             | Here will be a guide on how to train the system on your own data. |
+| [Effective Regions]()                                                                                | Here will be a guide to choosing the right regions.                                           |
+| [Contributing]()                                                                                    | Walk-through for how you can start contributing now.                                               |
+| 💖 **Community**                                                                                   |
+| [Discord](https://discord.gg/zZhUEDaQWj)                                                           | Join our community to discuss more. I would love to hear from you and assist!                      |
+| [Twitter](https://twitter.com/nerfstudioteam)                                                      | Follow us on Twitter @nerfstudioteam to see cool updates and announcements                         |
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- ACKNOWLEDGMENTS -->
