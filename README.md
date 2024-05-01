@@ -22,7 +22,7 @@
 <h1 align="center">Parking Space Detector</h1>
 
   <p align="center">
-    YOLOv8 based parking detecetion system using a RTSP camera,
+    YOLOv8 based parking detecetion system using a RTSP camera.
     <br />
     <br />
     <a href="https://github.com/danielbob32/ParkingSpace">View Demo</a>
