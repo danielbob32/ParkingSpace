@@ -41,9 +41,6 @@
   <ol>
     <li>
       <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
     </li>
     <li>
       <a href="#getting-started">Getting Started</a>
@@ -57,6 +54,7 @@
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
+    <li><a href="#references">References</a></li>
     <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
@@ -64,7 +62,7 @@
 
 
 <!-- ABOUT THE PROJECT -->
-## About The Project
+# About The Project
 
 Finding parking spaces has become increasingly challenging in densely populated neighborhoods, where the **number of cars is growing rapidly**. This task not only frustrates drivers but also contributes to traffic congestion as unsuccessful searches add unnecessary delays to journeys. What if there was a solution that could streamline this process?
 
@@ -83,12 +81,12 @@ By harnessing the power of computer vision and YOLOv8, ParkingSpace identifies e
 
 
 <!-- GETTING STARTED -->
-## Getting Started
+# Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+This will help you to get started with ParkingSpace if you want to run and experiment with the default street provided.
+For more complex changes and setting it to work on other input, please refer to the [references]("#references") section.
 
-### Prerequisites
+## Prerequisites
 
 This is an example of how to list things you need to use the software and how to install them.
 * npm
@@ -177,7 +175,10 @@ Project Link: [https://github.com/danielbob32/ParkingSpace](https://github.com/d
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+<!-- REFERENCES -->
+## References
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
