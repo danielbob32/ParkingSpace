@@ -88,26 +88,23 @@ For more complex changes and setting it to work on other input, please refer to 
 
 ## Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
+It's highly suggested to run the program on a CUDA compitable NVIDIA video card, although this version manages to use CPU, use at your own risk!
+You can find more information about installing CUDA [here](https://docs.nvidia.com/cuda/cuda-quick-start-guide/index.html)
+
+## Dependencies
+
+Note that ParkingSpace requires `python >= 3.8`.
   ```sh
-  npm install npm@latest -g
+  pip install ultralytics
+  pip install opencv-python
+  pip install numpy
   ```
 
 ### Installation
 
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
+ Clone the repo
    ```sh
    git clone https://github.com/danielbob32/ParkingSpace.git
-   ```
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
