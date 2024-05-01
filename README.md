@@ -148,7 +148,7 @@ Note that the model is really heavy to assure the maximum accuracy, if you find 
    
 ![image](https://github.com/danielbob32/ParkingSpace/assets/120675110/f1b3e74e-b69f-4a95-b1be-e659e0611e39)
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+_For more options and develpoment, please refer to the [references](#references) section.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -157,10 +157,11 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 <!-- ROADMAP -->
 ## Roadmap
 
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-    - [ ] Nested Feature
+- [✅] Add step-by-step template to init the system anywhere.
+- [ ] Make a solid web-app version.
+- [ ] Future development:  
+    - [ ] Self region assigment system.
+    - [ ] Plug'n'Play.
 
 See the [open issues](https://github.com/danielbob32/ParkingSpace/issues) for a full list of proposed features (and known issues).
 
