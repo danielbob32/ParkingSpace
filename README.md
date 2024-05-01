@@ -84,7 +84,7 @@ By harnessing the power of computer vision and YOLOv8, ParkingSpace identifies e
 # Getting Started
 
 This will help you to get started with ParkingSpace if you want to run and experiment with the default street provided.
-For more complex changes and setting it to work on other input, please refer to the [references]("#references") section.
+For more complex changes and setting it to work on other input, please refer to the [references](#references) section.
 
 ## Prerequisites
 
