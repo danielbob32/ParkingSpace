@@ -89,32 +89,49 @@ For more complex changes and setting it to work on other input, please refer to 
 ## Prerequisites
 
 It's highly suggested to run the program on a CUDA compitable NVIDIA video card, although this version manages to use CPU, use at your own risk!
-You can find more information about installing CUDA [here](https://docs.nvidia.com/cuda/cuda-quick-start-guide/index.html)
+You can find more information about installing CUDA [here](https://docs.nvidia.com/cuda/cuda-quick-start-guide/index.html).
 
 ## Dependencies
 
 Note that ParkingSpace requires `python >= 3.8`.
+Before starting, creatig a virtual environment is recommened.
   ```sh
   pip install ultralytics
   pip install opencv-python
   pip install numpy
   ```
-
+To run with ipython (highly recomended) install:
+```sh
+pip install jupyter
+pip install ipython
+```
 ### Installation
 
- Clone the repo
+Clone the repo
    ```sh
    git clone https://github.com/danielbob32/ParkingSpace.git
    ```
-
+As for now, you should have every thing you need to run the demo with your machine and get to know the system by adjusting the parameters.
+On the first run the model itself will be installed.
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
 <!-- USAGE EXAMPLES -->
-## Usage
+## Walkthrough
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+If everything works, about 15 seconds after running the cell you should get the first frame, Congratulations!
+
+![image](https://github.com/danielbob32/ParkingSpace/assets/120675110/710c9c66-7d26-4056-b5d9-6ca8d663cb82)
+
+A window will pop-up and you will able to see the parking spots that are being proccessed every 15 seconds or so.
+Note that the model is really heavy to assure the maximum accuracy, if you find the program crashing you can do the following steps:
+1. Extend the samepling intervals.
+   ![image](https://github.com/danielbob32/ParkingSpace/assets/120675110/7febc6be-1e54-4b6e-a028-9f947884602e)
+2. Reduce the model resoltion.
+    ![image](https://github.com/danielbob32/ParkingSpace/assets/120675110/e2d4846d-19ef-479b-a6ac-2e8c3410b38b)
+3. Reduce the model accuracy.
+![image](https://github.com/danielbob32/ParkingSpace/assets/120675110/f1b3e74e-b69f-4a95-b1be-e659e0611e39)
 
 _For more examples, please refer to the [Documentation](https://example.com)_
 
