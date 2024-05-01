@@ -4,9 +4,9 @@
 <!-- PROJECT SHIELDS -->
 <p align="center">
     <!-- community badges -->
-    <a href="https://discord.gg/z3tbEanX"><img src="https://img.shields.io/badge/Join-Discord-blue.svg"/></a>
+    <a href="https://discord.gg/zZhUEDaQWj"><img src="https://img.shields.io/badge/Join-Discord-blue.svg"/></a>
     <!-- license badge -->
-    <a href="https://github.com/nerfstudio-project/nerfstudio/blob/master/LICENSE">
+    <a href="https://github.com/danielbob32/ParkingSpace/blob/master/LICENSE">
         <img alt="License" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg">
     </a>
 </p>
@@ -189,7 +189,7 @@ Don't forget to give the project a star! Thanks again!
 <!-- LICENSE -->
 ## License
 
-Distributed under the Apache License. [click here](https://github.com/danielbob32/ParkingSpace/blob/master/LICENSE) for more information.
+Distributed under the Apache License, [click here](https://github.com/danielbob32/ParkingSpace/blob/master/LICENSE) for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -198,7 +198,7 @@ Distributed under the Apache License. [click here](https://github.com/danielbob3
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - danielbob32@gmail.com@danielbob32@gmail.com_client.com
+Daniel Bobritski  - danielbob32@gmail.com
 
 Project Link: [https://github.com/danielbob32/ParkingSpace](https://github.com/danielbob32/ParkingSpace)
 
