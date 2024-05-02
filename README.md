@@ -223,9 +223,8 @@ If you are interested in learning more about how to apply ParkingSpace to your u
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* []()
-* []()
-* []()
+* [Ultralytics](https://docs.ultralytics.com/)
+* [Roboflow](https://roboflow.com/)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
