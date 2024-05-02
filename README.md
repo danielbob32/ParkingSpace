@@ -56,6 +56,7 @@
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#learn-more">Learn More</a></li>
+    <li><a href="#data">Data</a></li>
     <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
@@ -218,9 +219,23 @@ If you are interested in learning more about how to apply ParkingSpace to your u
 | [Contributing]()                                                                                    | Walk-through for how you can start contributing now.                                               |
 | 💚 **Community**                                                                                   |
 | [Discord](https://discord.gg/zZhUEDaQWj)                                                           | Join our community to discuss more. I would love to hear from you and assist!                      |
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- ACKNOWLEDGMENTS -->
+<!-- DATA -->
+## Data
+The data that has been used is kindly listed bellow.
+
+| Section                                                                                            | Description                                                                                        |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| ❔ **Raw Data**                                                                                   |
+| [Raw Images](https://drive.google.com/drive/folders/19Vj134JEaQX1-8Ek_UGWvElroVuO2vXz?usp=sharing)                                                                                     | Set of raw images snipped from the live videos.|
+| [Augmented Images](https://drive.google.com/drive/folders/1gHNhspoRk9ewnf64yqftENCU64kqY5OP?usp=sharing)                                                                         | Augmented data set of the images above to enrich the Porbability map (save traking time.)|
+| 🖱️ **Porccessed Images**                                                                                  |
+| [Segmanted Images](https://drive.google.com/drive/folders/1Te31EDZKZ-XRcGjyaPD2qc1c4jH3Dpk9?usp=sharing)                                                                             | YOLOv8 segmented images .    |
+| [Binary Masks](https://drive.google.com/drive/folders/145pIsCr6CX0GDmDCKgXocOVQuMTDszI_?usp=sharing)                                                                                | Binary masks made out of the segmentation. |
+| [Porbability Map](https://drive.google.com/file/d/1fwNCc_sKEZyjcrchR3vL8WX9ULql6Wt2/view?usp=sharing)                                                                                    | Grey-scale probablity map constrcuted out of the binary masks.|
+
 ## Acknowledgments
 
 * [Ultralytics](https://docs.ultralytics.com/)
