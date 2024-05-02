@@ -38,7 +38,7 @@ def process_frame(frame,prob_map_path,thresholds):
     mask_img_inv = cv2.bitwise_not(hsv_mask)
     prob_map_combined = cv2.bitwise_and(prob_map, prob_map, mask=mask_img_inv)
 
-    # Apply thresholding to create a binary map
+    # Apply thresholds to create a binary map
     _, binary_map = cv2.threshold(prob_map_combined, 80, 255, cv2.THRESH_BINARY)
 
     # Define kernel size for morphological operations to separate close contours
@@ -133,7 +133,7 @@ def process_frame(frame,prob_map_path,thresholds):
     font_thickness = 2
 
     # Define parking space size parameters
-    avg_width_space = 200  # Average width of a parking space that can be splited
+    avg_width_space = 200  # Average width of a parking space that can be splitted
  
     # Label each parking space
     for contour in final_contours:

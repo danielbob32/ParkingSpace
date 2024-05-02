@@ -18,7 +18,7 @@ def extract_video_frame(file_name):
         return int(match.group(1)), int(match.group(2))
     else:
         return None
-# Funtion to get the center of a contour
+# Function to get the center of a contour
 def get_contour_center(contour):
     M = cv2.moments(contour)
     if M["m00"] != 0:
@@ -290,7 +290,7 @@ cv2.imshow('Labeled Image', labeled_image_bgr)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-## %% in develepment - parking spaces divider
+## %% in development - parking spaces divider
 max_width_single_space = 100
 # Define the gap you want to leave between split contours
 split_gap = 10
@@ -376,8 +376,8 @@ cv2.destroyAllWindows()
 
 
 
-# %% Pre-Processing (snipshots, segmentation, mask, probability map, draw areas, width and heigh analaysis)
-## %% Snipshops from video
+# %% Pre-Processing (snippets, segmentation, mask, probability map, draw areas, width and heigh analysis)
+## %% Snapshots from video
 input_folder = 'Assets/VideoFiles'
 output_folder = 'Assets/SnipShots'
 
@@ -387,7 +387,7 @@ os.makedirs(output_folder, exist_ok=True)
 snapshot_interval = 1800  # Define the interval for snapshots
 small_jump = 100  # Define a smaller interval for the set function
 
-# Iterate over each video in the input folder and its subfolders
+# Iterate over each video in the input folder and its subfolder
 for root, dirs, files in os.walk(input_folder):
     for i, video_file in enumerate(files):
         input_video = os.path.join(root, video_file)
@@ -423,7 +423,7 @@ for root, dirs, files in os.walk(input_folder):
 
 cv2.destroyAllWindows()
 
-## %% segmetation
+## %% segmentation
 
 model = YOLO('yolov8s-seg.pt')
 
