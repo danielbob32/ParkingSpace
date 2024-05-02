@@ -231,7 +231,7 @@ The data that has been used is kindly listed bellow.
 | 🖼️ **Raw Data**                                                                                   |
 | [Raw Images](https://drive.google.com/drive/folders/19Vj134JEaQX1-8Ek_UGWvElroVuO2vXz?usp=sharing)                                                                                     | Set of raw images snipped from the live videos.|
 | [Augmented Images](https://drive.google.com/drive/folders/1gHNhspoRk9ewnf64yqftENCU64kqY5OP?usp=sharing)                                                                         | Augmented data set of the images above to enrich the Porbability map (save traking time.)|
-| 🖌️ **Porccessed Images**                                                                                  |
+| 🖌️ **Porccessed Images**                                                                                                 |
 | [Segmanted Images](https://drive.google.com/drive/folders/1Te31EDZKZ-XRcGjyaPD2qc1c4jH3Dpk9?usp=sharing)                                                                             | YOLOv8 segmented images .    |
 | [Binary Masks](https://drive.google.com/drive/folders/145pIsCr6CX0GDmDCKgXocOVQuMTDszI_?usp=sharing)                                                                                | Binary masks made out of the segmentation. |
 | [Porbability Map](https://drive.google.com/file/d/1fwNCc_sKEZyjcrchR3vL8WX9ULql6Wt2/view?usp=sharing)                                                                                    | Grey-scale probablity map constrcuted out of the binary masks.|
