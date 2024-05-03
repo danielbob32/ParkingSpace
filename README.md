@@ -97,6 +97,7 @@ Before starting, creating a virtual environment is recommended.
 pip install ultralytics
 pip install opencv-python
 pip install numpy
+pip install requests
 ```
 
 To run with ipython (highly recommended) install:
@@ -115,7 +116,7 @@ git clone https://github.com/danielbob32/ParkingSpace.git
 ```
 
 As for now, you should have every thing you need to run the demo with your machine and get to know the system by adjusting the parameters.
-On the first run the model itself will be installed.
+On the first run the model itself will be installed and the required assets will be downloaded from drive and create paths as needed.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

@@ -4,6 +4,8 @@ import numpy as np
 import json
 from ultralytics import YOLO
 import time
+import os
+import requests
 
 # function to get the center of the contour
 def get_contour_center(contour):
@@ -184,7 +186,16 @@ def load_regions_from_file(file_path='regions.json'):
     )
 
 
-
+def download_file(url, local_filename):
+    """Downloads a file from the specified Google Drive URL."""
+    if not os.path.exists(os.path.dirname(local_filename)):
+        os.makedirs(os.path.dirname(local_filename))
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(local_filename, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+    return local_filename
 
 # The thresholds for each region
 thresholds = {
@@ -265,12 +276,23 @@ thresholds = {
 
 # Essentials for model
 model = YOLO('yolov8x-seg.pt') # Load the model, can reduced if needed
-prob_map_path = 'Assets/ProbMap/probability_map.png' # Path to the probability map
-video_file = 'Assets/VideoFiles/ch01_00000000010000000.mp4' 
+video_file = 'Assets/VideoFiles/ch01_00000000000000000.mp4'
+prob_map_path = 'Assets/ProbMap/probability_map.png'
+video_url = 'https://drive.google.com/uc?export=download&id=1dG7MvADcDowZhI5ht8gfwSEP6PY2q-N-'
+prob_map_url = 'https://drive.google.com/uc?export=download&id=1fwNCc_sKEZyjcrchR3vL8WX9ULql6Wt2'
 cap = cv2.VideoCapture(video_file)
 upper_level_l,upper_level_m,upper_level_r, close_perp,far_side,close_side,far_perp,small_park, ignore_regions = load_regions_from_file()
 
+# Check and download the video file if it does not exist
+if not os.path.exists(video_file):
+    print(f"{video_file} not found. Downloading...")
+    download_file(video_url, video_file)
 
+# Check and download the probability map if it does not exist
+if not os.path.exists(prob_map_path):
+    print(f"{prob_map_path} not found. Downloading...")
+    download_file(prob_map_url, prob_map_path)
+    
 #Set the interval in seconds
 interval = 15.0  # Process one frame every second
 
