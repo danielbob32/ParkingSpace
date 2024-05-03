@@ -14,7 +14,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/danielbob32/ParkingSpace">
-    <img src="docs/images/index.gif" width="80%">
+   ![index](https://github.com/danielbob32/ParkingSpace/assets/120675110/c128eb3a-0221-49b5-b596-d167a89c4740)
   </a>
 
 <h1 align="center">ParkingSpace Parking Spots Detector</h1>
