@@ -4,8 +4,6 @@ import numpy as np
 import json
 from ultralytics import YOLO
 import time
-import os
-import requests
 
 # function to get the center of the contour
 def get_contour_center(contour):
@@ -185,18 +183,6 @@ def load_regions_from_file(file_path='regions.json'):
         [np.array(region) for region in data['ignore_regions']]
     )
 
-
-def download_file(url, local_filename):
-    """Downloads a file from the specified Google Drive URL."""
-    if not os.path.exists(os.path.dirname(local_filename)):
-        os.makedirs(os.path.dirname(local_filename))
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(local_filename, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
-    return local_filename
-
 # The thresholds for each region
 thresholds = {
         'upper_level_l': {
@@ -276,22 +262,11 @@ thresholds = {
 
 # Essentials for model
 model = YOLO('yolov8x-seg.pt') # Load the model, can reduced if needed
-video_file = 'Assets/VideoFiles/ch01_00000000000000000.mp4'
-prob_map_path = 'Assets/ProbMap/probability_map.png'
-video_url = 'https://drive.google.com/uc?export=download&id=1dG7MvADcDowZhI5ht8gfwSEP6PY2q-N-'
-prob_map_url = 'https://drive.google.com/uc?export=download&id=1fwNCc_sKEZyjcrchR3vL8WX9ULql6Wt2'
+video_file = 'Demo/exp3.mp4' # Path to the video file, exp1, and exp2 are also available
+prob_map_path = 'Demo/probability_map.png' 
 cap = cv2.VideoCapture(video_file)
 upper_level_l,upper_level_m,upper_level_r, close_perp,far_side,close_side,far_perp,small_park, ignore_regions = load_regions_from_file()
 
-# Check and download the video file if it does not exist
-if not os.path.exists(video_file):
-    print(f"{video_file} not found. Downloading...")
-    download_file(video_url, video_file)
-
-# Check and download the probability map if it does not exist
-if not os.path.exists(prob_map_path):
-    print(f"{prob_map_path} not found. Downloading...")
-    download_file(prob_map_url, prob_map_path)
     
 #Set the interval in seconds
 interval = 15.0  # Process one frame every second
@@ -340,23 +315,3 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
-# %%
-
-
-# Used for single frame processing when using implemneting in an application
-# def process_single_frame(frame, model, prob_map_path, thresholds):
-    
-#     result = model(frame,stream=True, conf=0.15,classes=[2,3,7],imgsz=(1088,1920))
-    
-#     # Assuming `result` is a list and we only process the first one for simplicity
-#     for r in result:
-#         segmented_frame = r.plot(conf=False, boxes=False, masks=True)
-#         segmented_overlay = cv2.addWeighted(frame, 0.5, segmented_frame, 0.5, 0)
-#         parking_space_boxes, number_of_empty_spaces = process_frame(segmented_frame, prob_map_path, thresholds)
-#         result_image = cv2.addWeighted(segmented_overlay, 0.5, parking_space_boxes, 0.5, 0)
-#         cv2.putText(result_image, f"Empty Parking Spaces: {number_of_empty_spaces}", (10, 30),
-#                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-#         return result_image
-    
-#     # If there's no result from the model, return the original frame
-#     return frame

@@ -91,13 +91,12 @@ You can find more information about installing CUDA [here](https://docs.nvidia.c
 ### Dependencies
 
 Note that ParkingSpace requires `python >= 3.8`.
-Before starting, creating a virtual environment is recommended.
-
+Before starting, creating a virtual environment is recommended. Vscode guide on how to is [linked-here](https://code.visualstudio.com/docs/python/environments).
+Some of the Dependencies will be installed with ultralytics.
 ```sh
 pip install ultralytics
 pip install opencv-python
 pip install numpy
-pip install requests
 ```
 
 To run with ipython (highly recommended) install:
@@ -109,7 +108,7 @@ pip install ipython
 
 ### Installation
 
-Clone the repo
+Clone the repo:
 
 ```sh
 git clone https://github.com/danielbob32/ParkingSpace.git
