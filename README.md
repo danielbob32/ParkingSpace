@@ -87,6 +87,7 @@ For more complex changes and setting it to work on other input, please refer to 
 
 It's highly suggested to run the program on a CUDA compatible NVIDIA video card, although this version manages to use CPU, use at your own risk!
 You can find more information about installing CUDA [here](https://docs.nvidia.com/cuda/cuda-quick-start-guide/index.html).
+You need  2.5 GB of space to run the demo version.
 
 ### Dependencies
 
@@ -115,15 +116,17 @@ git clone https://github.com/danielbob32/ParkingSpace.git
 ```
 
 As for now, you should have every thing you need to run the demo with your machine and get to know the system by adjusting the parameters.
-On the first run the model itself will be installed and the required assets will be downloaded from drive and create paths as needed.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- WALKTHROUGH -->
 
 ## Walkthrough
+On the first run, after you opened a virtual environment and installed all the dependencies the model it-self will be installed, which will take some time depends on your machine.
+You will might need to re-run the code to actually start it.
 
 If everything works, about 15 seconds after running the cell you should get the first frame, Congratulations!
+Note that this is not showing a live video and set to a specific interval, you can always reduce it to see live footage if your machine can handle it.
 
 ![image](https://github.com/danielbob32/ParkingSpace/assets/120675110/710c9c66-7d26-4056-b5d9-6ca8d663cb82)
 
