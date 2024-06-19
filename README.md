@@ -24,7 +24,7 @@
     YOLOv8 based parking detection system using a RTSP camera.
     <br />
     <br />
-    <a href="https://github.com/danielbob32/ParkingSpace">View Demo</a>
+    <a href="https://danielbob32.github.io/PSweb/">Offical Website</a>
     ·
     <a href="https://github.com/danielbob32/ParkingSpace/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     ·
@@ -59,18 +59,17 @@
 </details>
 
 <!-- ABOUT THE PROJECT -->
-
 # About The Project
+Finding parking spaces is a growing problem in crowded neighborhoods, where the number of cars is rapidly increasing. This issue not only frustrates drivers but also adds to traffic congestion. What if there was a way to make finding parking easier?
 
-Finding parking spaces has become increasingly challenging in densely populated neighborhoods, where the **number of cars is growing rapidly**. This task not only frustrates drivers but also contributes to traffic congestion as unsuccessful searches add unnecessary delays to journeys. What if there was a solution that could streamline this process?
+Introducing ParkingSpace, a Python-based system using YOLOv8 and real-time streaming protocol (RTSP) cameras to detect parking spots. Developed during my computer science degree, with guidance from Prof. Roi Poranne, ParkingSpace aims to ease the parking challenges in urban areas.
 
-Introducing ParkingSpace, a Python-based system leveraging YOLOv8 and real-time streaming protocol (RTSP) cameras to revolutionize parking spot detection. Developed as a project during my computer science degree, under the guidance of [Prof. Roi Poranne](https://github.com/Roipo), ParkingSpace aims to alleviate the parking woes encountered in urban areas.
+### The Challenge
+In busy neighborhoods, finding an empty parking spot can be very difficult. This not only wastes time but also worsens traffic as drivers keep circling around. This problem led to the creation of ParkingSpace, a solution to make urban parking more efficient.
 
-The Challenge
-In bustling neighborhoods, the hunt for a vacant parking spot can be maddening. It not only consumes valuable time but also exacerbates traffic congestion as drivers circle blocks in search of elusive spaces. This frustration inspired the creation of ParkingSpace, a solution designed to make urban parking more efficient and less stressful.
+### The Solution
+Using computer vision and YOLOv8, ParkingSpace detects empty parking spaces in real-time, even in areas without clearly defined spots. This algorithm finds available spaces, helping drivers park without unnecessary circling. With ParkingSpace, driving in crowded streets becomes easier, reducing congestion and improving the urban driving experience.
 
-The Solution
-By harnessing the power of computer vision and YOLOv8, ParkingSpace identifies empty parking spaces in real-time, even within undefined parking areas. This innovative algorithm detects available spots, allowing drivers to make informed decisions about where to park without aimless circling. With ParkingSpace, navigating crowded streets becomes more manageable, reducing overcrowding the street and enhancing the overall urban driving experience on the way home or any other destination.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
