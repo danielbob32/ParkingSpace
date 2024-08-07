@@ -94,7 +94,7 @@ Note that ParkingSpace requires `python >= 3.8`.
 Before starting, creating a virtual environment is recommended. Vscode guide on how to is [linked-here](https://code.visualstudio.com/docs/python/environments).
 Some of the Dependencies will be installed with ultralytics.
 ```sh
-pip install ultralytics
+pip install ultralytics==8.1.34
 pip install opencv-python
 pip install numpy
 ```
