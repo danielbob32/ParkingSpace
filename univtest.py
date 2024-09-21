@@ -1,5 +1,5 @@
 # %% pre-run for all
-##%% import libraries
+#%% import libraries
 
 import numpy as np
 import cv2
@@ -10,7 +10,7 @@ import shutil
 import re
 import json
 
-## %% utility functions
+#%% utility functions
 # Function to extract video and frame number from the file name for sorting
 def extract_video_frame(file_name):
     match = re.match(r'video_(\d+)_frame(\d+)\.png', file_name)
@@ -423,62 +423,66 @@ for root, dirs, files in os.walk(input_folder):
 
 cv2.destroyAllWindows()
 
-## %% segmentation
+#%% segmentation
 
 model = YOLO('yolov8s-seg.pt')
-
+test_path = 'univtest.py'
 input_folder = 'Assets/SnipShots'
 output_folder = 'Assets/SegmentedImages'
 base_segmentation_output_dir = 'runs/segment'
 
-# Record the start time
-start_time = time.time()
+result = model(source='test.jpg', show=True, conf=0.05, save=True, classes=2, show_labels=False, show_conf=False, show_boxes=False)
+print(result)
 
-# Function to extract video and frame number from the file name for sorting
-def extract_video_frame(file_name):
-    # This will match video_X_frameY.png and extract X, Y as integers
-    match = re.match(r'video_(\d+)_frame(\d+)\.png', file_name)
-    if match:
-        return int(match.group(1)), int(match.group(2))
-    else:
-        return None
 
-# Get all files and filter out any that don't match the expected pattern
-file_names = [f for f in os.listdir(input_folder) if extract_video_frame(f) is not None]
+# # Record the start time
+# start_time = time.time()
 
-# Sort files by video number, then by frame number
-file_names.sort(key=extract_video_frame)
+# # Function to extract video and frame number from the file name for sorting
+# def extract_video_frame(file_name):
+#     # This will match video_X_frameY.png and extract X, Y as integers
+#     match = re.match(r'video_(\d+)_frame(\d+)\.png', file_name)
+#     if match:
+#         return int(match.group(1)), int(match.group(2))
+#     else:
+#         return None
 
-# Process each file in the sorted order
-for file_name in file_names:
-    file_path = os.path.join(input_folder, file_name)
-    print(f"Processing file: {file_name}")  # For debugging
+# # Get all files and filter out any that don't match the expected pattern
+# file_names = [f for f in os.listdir(input_folder) if extract_video_frame(f) is not None]
 
-    # Run the model and wait for a second for the file system to update (if necessary)
-    # Replace the following line with your actual YOLO model call
-    model(source=file_path, show=False, conf=0.05, save=True, classes=2, show_labels=False, show_conf=False, show_boxes=False)
+# # Sort files by video number, then by frame number
+# file_names.sort(key=extract_video_frame)
 
-    # Assuming the model saves the output with the same filename in a predict directory
-    # Find the latest 'predict' directory
-    latest_predict_dir = max([os.path.join(base_segmentation_output_dir, d) for d in os.listdir(base_segmentation_output_dir)], 
-                             key=os.path.getctime)
+# # Process each file in the sorted order
+# for file_name in file_names:
+#     file_path = os.path.join(input_folder, file_name)
+#     print(f"Processing file: {file_name}")  # For debugging
+
+#     # Run the model and wait for a second for the file system to update (if necessary)
+#     # Replace the following line with your actual YOLO model call
+#     model(source=file_path, show=False, conf=0.05, save=True, classes=2, show_labels=False, show_conf=False, show_boxes=False)
+
+#     # Assuming the model saves the output with the same filename in a predict directory
+#     # Find the latest 'predict' directory
+#     latest_predict_dir = max([os.path.join(base_segmentation_output_dir, d) for d in os.listdir(base_segmentation_output_dir)], 
+#                              key=os.path.getctime)
     
-    segmented_file_path = os.path.join(latest_predict_dir, file_name)
-    output_path = os.path.join(output_folder, file_name)
+#     segmented_file_path = os.path.join(latest_predict_dir, file_name)
+#     output_path = os.path.join(output_folder, file_name)
 
-    # Move the segmented file to the output directory
-    if os.path.exists(segmented_file_path):
-        shutil.move(segmented_file_path, output_path)
-    else:
-        print(f"WARNING: Segmented file not found for {file_name}")  # For debugging
+#     # Move the segmented file to the output directory
+#     if os.path.exists(segmented_file_path):
+#         shutil.move(segmented_file_path, output_path)
+#     else:
+#         print(f"WARNING: Segmented file not found for {file_name}")  # For debugging
 
-# Record the end time
-end_time = time.time()
-total_time = end_time - start_time
+# # Record the end time
+# end_time = time.time()
+# total_time = end_time - start_time
 
-print("Segmentation process completed.")
-print(f"Total running time: {total_time} seconds")
-## %% make HSV mask
+# print("Segmentation process completed.")
+# print(f"Total running time: {total_time} seconds")
+#%% make HSV mask
 
 # Directories
 segmented_image_dir = 'Assets/SegmentedImages'

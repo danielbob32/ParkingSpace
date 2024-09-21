@@ -1,0 +1,10 @@
+*.jpg
+*.png
+*.avi
+*.mp4
+*.pt
+*.npy
+*.pyc
+*.css
+*.html
+app.py
