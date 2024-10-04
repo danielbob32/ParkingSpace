@@ -91,7 +91,9 @@ YOLOv11 and CUDA 11.7 Updates
 ParkingSpace now supports YOLOv11 with CUDA 11.7 and Python 3.8. This version has been tested and optimized with the following package versions:
 
 PyTorch 1.13.1+cu117
+
 Torchvision 0.14.1+cu117
+
 Torchaudio 0.13.1+cu117
 To install these specific versions, use the following command:
 ```sh
