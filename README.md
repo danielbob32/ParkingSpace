@@ -87,7 +87,8 @@ For more complex changes and setting it to work on other input, please refer to 
 
 It's highly suggested to run the program on a CUDA-compatible NVIDIA video card, although this version manages to use CPU, use at your own risk! You can find more information about installing CUDA here. You need 2.5 GB of space to run the demo version.
 
-YOLOv11 and CUDA 11.7 Updates
+YOLOv11 and CUDA 11.7 Updates!
+
 ParkingSpace now supports YOLOv11 with CUDA 11.7 and Python 3.8. This version has been tested and optimized with the following package versions:
 
 PyTorch 1.13.1+cu117
