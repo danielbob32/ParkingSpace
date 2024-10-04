@@ -85,10 +85,29 @@ For more complex changes and setting it to work on other input, please refer to 
 
 ### Prerequisites
 
-It's highly suggested to run the program on a CUDA compatible NVIDIA video card, although this version manages to use CPU, use at your own risk!
-You can find more information about installing CUDA [here](https://docs.nvidia.com/cuda/cuda-quick-start-guide/index.html).
-You need  2.5 GB of space to run the demo version.
+It's highly suggested to run the program on a CUDA-compatible NVIDIA video card, although this version manages to use CPU, use at your own risk! You can find more information about installing CUDA here. You need 2.5 GB of space to run the demo version.
 
+YOLOv11 and CUDA 11.7 Updates
+ParkingSpace now supports YOLOv11 with CUDA 11.7 and Python 3.8. This version has been tested and optimized with the following package versions:
+
+PyTorch 1.13.1+cu117
+Torchvision 0.14.1+cu117
+Torchaudio 0.13.1+cu117
+To install these specific versions, use the following command:
+```sh
+pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1+cu117 --extra-index-url https://download.pytorch.org/whl/cu117
+```
+CUDA Installation
+To install CUDA 11.7:
+
+Download the installer for your operating system from the NVIDIA CUDA Toolkit Archive.
+Follow the CUDA installation guide for your OS (Linux/Windows/macOS).
+After installation, ensure that your system’s environment variables are correctly set for CUDA_HOME and PATH.
+Once installed, verify the installation with:
+```sh
+nvcc --version
+```
+You should see CUDA version 11.7 in the output.
 ### Dependencies
 
 Note that ParkingSpace requires `python >= 3.8`.
