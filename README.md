@@ -65,14 +65,14 @@
 
 | Feature Update | Description | Estimated Release |
 |------------------------------|----------------------------------------------------------------------------------|------------------|
-| **Upgrade to YOLOv12** 🚀 | Enhancing detection accuracy by integrating attention mechanisms into the model. | **April 2025** |
-| **Improved Detection Algorithm** 🎯 | Revamping parking space logic by referencing nearby cars for better spatial understanding. | **May 2025** |
-| **Automatic Parking Area Mapping** 🗺️ | Implementing a pipeline that autonomously builds a probability map and stops when achieving high accuracy. | **June 2025** |
-| **Automatic Region Division** 📏 | Developing an algorithm that learns pixel descriptors to estimate valid car positions based on distance and angle. | **July 2025** |
-| **Mobile Notifications** 📱 | Get instant alerts about available parking spots via a mobile app. | **August 2025** |
-| **Performance Optimizations** ⚡ | Faster detection speeds with reduced memory usage. | **Ongoing** |
+| **Upgrade to YOLOv12**  | Enhancing detection accuracy by integrating attention mechanisms into the model. | **April 2025** |
+| **Improved Detection Algorithm**  | Revamping parking space logic by referencing nearby cars for better spatial understanding. | **May 2025** |
+| **Automatic Parking Area Mapping** | Implementing a pipeline that autonomously builds a probability map and stops when achieving high accuracy. | **June 2025** |
+| **Automatic Region Division**  | Developing an algorithm that learns pixel descriptors to estimate valid car positions based on distance and angle. | **July 2025** |
+| **Mobile Notifications**  | Get instant alerts about available parking spots via a mobile app. | **August 2025** |
+| **Performance Optimizations**  | Faster detection speeds with reduced memory usage. | **Ongoing** |
 
-🚧 **Want to Contribute?**  
+:feelsgood: **Want to Contribute?**  
 We welcome ideas, feedback, and contributions! If you're interested in collaborating, feel free to [open an issue](https://github.com/danielbob32/ParkingSpace/issues) or reach out directly.  
 
 For further details, contact me at [danielbob32@gmail.com](mailto:danielbob32@gmail.com).  
