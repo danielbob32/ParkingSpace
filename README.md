@@ -21,7 +21,7 @@
 <h1 align="center">ParkingSpace Parking Spots Detector</h1>
 
   <p align="center">
-    YOLOv8 based parking detection system using a RTSP camera.
+    YOLOv11 based parking detection system using a RTSP camera.
     <br />
     <br />
     <a href="https://github.com/danielbob32/ParkingSpace">View Demo</a>
@@ -57,6 +57,28 @@
     <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
+<!-- UPCOMING UPDATES -->
+<br />
+<h2 align="center">Upcoming Updates  </h2>
+
+##### We are actively working on improving **ParkingSpace** with exciting new features and optimizations! Below is our planned timeline for upcoming updates:
+
+| Feature Update | Description | Estimated Release |
+|------------------------------|----------------------------------------------------------------------------------|------------------|
+| **Upgrade to YOLOv12** 🚀 | Enhancing detection accuracy by integrating attention mechanisms into the model. | **April 2025** |
+| **Improved Detection Algorithm** 🎯 | Revamping parking space logic by referencing nearby cars for better spatial understanding. | **May 2025** |
+| **Automatic Parking Area Mapping** 🗺️ | Implementing a pipeline that autonomously builds a probability map and stops when achieving high accuracy. | **June 2025** |
+| **Automatic Region Division** 📏 | Developing an algorithm that learns pixel descriptors to estimate valid car positions based on distance and angle. | **July 2025** |
+| **Mobile Notifications** 📱 | Get instant alerts about available parking spots via a mobile app. | **August 2025** |
+| **Performance Optimizations** ⚡ | Faster detection speeds with reduced memory usage. | **Ongoing** |
+
+🚧 **Want to Contribute?**  
+We welcome ideas, feedback, and contributions! If you're interested in collaborating, feel free to [open an issue](https://github.com/danielbob32/ParkingSpace/issues) or reach out directly.  
+
+For further details, contact me at [danielbob32@gmail.com](mailto:danielbob32@gmail.com).  
+
+<br />
+
 
 <!-- ABOUT THE PROJECT -->
 
