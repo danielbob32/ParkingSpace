@@ -65,12 +65,14 @@ def verify_nearby_vehicle(contour, vehicle_mask, aspect_ratio,
             matching_vehicles.append((full_x, full_y, nw, nh))
 
     return matching_vehicles
+
 def compute_parking_space_score(
     area, width, height, aspect_ratio, solidity,
     vehicle_bboxes, region_thresholds
 ):
     """
-    Compute a 'score' for a potential parking space.
+    Compute a comprehensive score for a potential parking space.
+    
     Params:
         area           : contour area
         width, height  : bounding box dimensions
@@ -80,51 +82,90 @@ def compute_parking_space_score(
         region_thresholds: dictionary with min_area, max_width, etc.
 
     Returns:
-        A numeric score (float or int).
+        A numeric score (0-100).
     """
-
     score = 0.0
-
-    # 1) Area Score: if within region's min_area < area < some upper bound
-    #    we can do a simple ratio of how close to "ideal" we consider it
-    ideal_area = (region_thresholds["min_area"] + region_thresholds["max_width"]*region_thresholds["max_height"])/2
-    # The "ideal" above is just a heuristic guess, e.g. the midpoint. 
-    # You could also define your own typical "ideal" area or do more advanced logic.
-
-    # We'll clamp to a max of 30 points for area
-    area_normalized = min(area / ideal_area, 1.0)  # ratio up to 1
-    area_score = 30 * area_normalized
+    
+    # 1) Area Score (0-30 points)
+    # Calculate ideal area based on region thresholds
+    ideal_min_area = region_thresholds["min_area"]
+    ideal_max_area = region_thresholds["max_width"] * region_thresholds["max_height"]
+    ideal_area = (ideal_min_area + ideal_max_area) / 2
+    
+    # Normalize area score - higher points for being closer to ideal area
+    if area < ideal_min_area:
+        area_score = 15 * (area / ideal_min_area)  # Partial score if below minimum
+    elif area > ideal_max_area:
+        area_score = 30 * (1 - min((area - ideal_max_area) / ideal_max_area, 1.0))  # Decreasing score if too large
+    else:
+        # Calculate how close to ideal area (higher score closer to ideal)
+        area_diff_ratio = min(abs(area - ideal_area) / ideal_area, 1.0)
+        area_score = 30 * (1 - area_diff_ratio)
+    
     score += area_score
-
-    # 2) Aspect Ratio Score: if it’s significantly above region_thresholds["max_aspect_ratio"], it’s invalid,
-    #    but if it’s well below that, let’s give more points. We'll do a simple invert.
-    #    The closer to 1 the better (i.e. squares), but your logic might differ.
+    
+    # 2) Aspect Ratio Score (0-20 points)
+    # Parking spaces should have reasonable aspect ratios
     max_asp = region_thresholds["max_aspect_ratio"]
-    # We'll clamp aspect_ratio to something so we don't get negative
-    aspect_ratio_normalized = max_asp / aspect_ratio if aspect_ratio != 0 else 0
-    # Then scale. Suppose max_asp is 5, if aspect_ratio=1 => aspect_ratio_normalized=5 => but we only want up to 1
-    aspect_ratio_normalized = min(aspect_ratio_normalized, 1.0)
-    aspect_ratio_score = 20 * aspect_ratio_normalized
+    ideal_aspect_ratio = 2.0  # Most parking spaces are roughly 2:1 (length:width)
+    
+    if aspect_ratio > max_asp:
+        aspect_ratio_score = 0  # Invalid aspect ratio
+    else:
+        # Higher score for being closer to ideal aspect ratio
+        aspect_diff = abs(aspect_ratio - ideal_aspect_ratio)
+        aspect_ratio_score = 20 * (1 - min(aspect_diff / ideal_aspect_ratio, 1.0))
+    
     score += aspect_ratio_score
-
-    # 3) Solidity Score: from 0 to 20
-    #    Typically we want higher solidity => higher score
-    #    Suppose we consider anything above region_thresholds["min_solidity"] to be "ideal"
+    
+    # 3) Solidity Score (0-20 points)
+    # Higher solidity means more rectangular/regular shape (better for parking spaces)
     min_sol = region_thresholds["min_solidity"]
-    # If solidity < min_sol, this space might be iffy, but we already filtered it out in the detection logic.
-    # We'll measure how far above min_sol it is, up to 1
-    solidity_normalized = (solidity - min_sol) / (1.0 - min_sol) if solidity > min_sol else 0
-    solidity_normalized = min(max(solidity_normalized, 0), 1)
-    solidity_score = 20 * solidity_normalized
+    if solidity < min_sol:
+        solidity_score = 0
+    else:
+        # Scale from min_solidity to 1.0 (perfect solidity)
+        solidity_normalized = (solidity - min_sol) / (1.0 - min_sol)
+        solidity_score = 20 * solidity_normalized
+    
     score += solidity_score
-
-    # 4) No penalty if no cars found. But add a bonus if at least one is found.
-    #    You could also do one bonus per vehicle if you want. We'll do a single bonus if there's at least one.
-    if len(vehicle_bboxes) > 0:
-        # Suppose we add +30 if at least 1 car is near
-        score += 30
-
-    return score
+    
+    # 4) Nearby Vehicle Analysis (0-30 points)
+    # If there are nearby vehicles, analyze their relationship to this space
+    vehicle_score = 0
+    
+    if vehicle_bboxes:
+        # Base points for having nearby vehicles (confirms this is a parking area)
+        vehicle_score += 10
+        
+        # Analyze vehicle dimensions compared to parking space
+        vehicle_areas = []
+        vehicle_aspect_ratios = []
+        
+        for vx, vy, vw, vh in vehicle_bboxes:
+            v_area = vw * vh
+            v_aspect = max(vw, vh) / float(min(vw, vh)) if min(vw, vh) > 0 else 0
+            vehicle_areas.append(v_area)
+            vehicle_aspect_ratios.append(v_aspect)
+        
+        if vehicle_areas:
+            # Calculate average vehicle dimensions
+            avg_vehicle_area = sum(vehicle_areas) / len(vehicle_areas)
+            avg_vehicle_aspect = sum(vehicle_aspect_ratios) / len(vehicle_aspect_ratios)
+            
+            # Compare parking space to average vehicle dimensions
+            # Higher score if parking space is proportional to vehicle size
+            area_ratio = min(area / avg_vehicle_area, avg_vehicle_area / area)
+            aspect_ratio_similarity = 1 - min(abs(aspect_ratio - avg_vehicle_aspect) / max(aspect_ratio, avg_vehicle_aspect), 1.0)
+            
+            # Add points based on similarity to vehicle dimensions
+            vehicle_score += 10 * area_ratio
+            vehicle_score += 10 * aspect_ratio_similarity
+    
+    score += vehicle_score
+    
+    # Ensure score is between 0-100
+    return min(max(score, 0), 100)
 
 def process_frame(frame, vehicle_mask, prob_map_path, thresholds):
     # 1) Load probability map
