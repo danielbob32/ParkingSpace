@@ -65,7 +65,66 @@ def verify_nearby_vehicle(contour, vehicle_mask, aspect_ratio,
             matching_vehicles.append((full_x, full_y, nw, nh))
 
     return matching_vehicles
+def compute_parking_space_score(
+    area, width, height, aspect_ratio, solidity,
+    vehicle_bboxes, region_thresholds
+):
+    """
+    Compute a 'score' for a potential parking space.
+    Params:
+        area           : contour area
+        width, height  : bounding box dimensions
+        aspect_ratio   : bounding box aspect ratio
+        solidity       : contour solidity
+        vehicle_bboxes : list of nearby vehicles (could be empty)
+        region_thresholds: dictionary with min_area, max_width, etc.
 
+    Returns:
+        A numeric score (float or int).
+    """
+
+    score = 0.0
+
+    # 1) Area Score: if within region's min_area < area < some upper bound
+    #    we can do a simple ratio of how close to "ideal" we consider it
+    ideal_area = (region_thresholds["min_area"] + region_thresholds["max_width"]*region_thresholds["max_height"])/2
+    # The "ideal" above is just a heuristic guess, e.g. the midpoint. 
+    # You could also define your own typical "ideal" area or do more advanced logic.
+
+    # We'll clamp to a max of 30 points for area
+    area_normalized = min(area / ideal_area, 1.0)  # ratio up to 1
+    area_score = 30 * area_normalized
+    score += area_score
+
+    # 2) Aspect Ratio Score: if it’s significantly above region_thresholds["max_aspect_ratio"], it’s invalid,
+    #    but if it’s well below that, let’s give more points. We'll do a simple invert.
+    #    The closer to 1 the better (i.e. squares), but your logic might differ.
+    max_asp = region_thresholds["max_aspect_ratio"]
+    # We'll clamp aspect_ratio to something so we don't get negative
+    aspect_ratio_normalized = max_asp / aspect_ratio if aspect_ratio != 0 else 0
+    # Then scale. Suppose max_asp is 5, if aspect_ratio=1 => aspect_ratio_normalized=5 => but we only want up to 1
+    aspect_ratio_normalized = min(aspect_ratio_normalized, 1.0)
+    aspect_ratio_score = 20 * aspect_ratio_normalized
+    score += aspect_ratio_score
+
+    # 3) Solidity Score: from 0 to 20
+    #    Typically we want higher solidity => higher score
+    #    Suppose we consider anything above region_thresholds["min_solidity"] to be "ideal"
+    min_sol = region_thresholds["min_solidity"]
+    # If solidity < min_sol, this space might be iffy, but we already filtered it out in the detection logic.
+    # We'll measure how far above min_sol it is, up to 1
+    solidity_normalized = (solidity - min_sol) / (1.0 - min_sol) if solidity > min_sol else 0
+    solidity_normalized = min(max(solidity_normalized, 0), 1)
+    solidity_score = 20 * solidity_normalized
+    score += solidity_score
+
+    # 4) No penalty if no cars found. But add a bonus if at least one is found.
+    #    You could also do one bonus per vehicle if you want. We'll do a single bonus if there's at least one.
+    if len(vehicle_bboxes) > 0:
+        # Suppose we add +30 if at least 1 car is near
+        score += 30
+
+    return score
 
 def process_frame(frame, vehicle_mask, prob_map_path, thresholds):
     # 1) Load probability map
@@ -93,7 +152,6 @@ def process_frame(frame, vehicle_mask, prob_map_path, thresholds):
     # 5) Find potential parking-space contours
     contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # We'll collect: (contour, vehicle_bboxes_for_that_contour)
     final_contours_info = []
 
     for contour in contours:
@@ -150,7 +208,7 @@ def process_frame(frame, vehicle_mask, prob_map_path, thresholds):
         if aspect_ratio > region_thresholds['max_aspect_ratio']:
             continue
 
-        # 6) Now find *all* vehicles near this contour
+        # 6) Get *all* vehicles near this contour
         vehicle_bboxes = verify_nearby_vehicle(
             contour, 
             vehicle_mask_scaled, 
@@ -159,30 +217,39 @@ def process_frame(frame, vehicle_mask, prob_map_path, thresholds):
             aspect_ratio_tolerance=0.4
         )
 
-        final_contours_info.append((contour, vehicle_bboxes))
+        # 7) Compute a numeric "score" for the space
+        score = compute_parking_space_score(
+            area=area,
+            width=w,
+            height=h,
+            aspect_ratio=aspect_ratio,
+            solidity=solidity,
+            vehicle_bboxes=vehicle_bboxes,
+            region_thresholds=region_thresholds
+        )
+
+        # Store everything we might need to draw or filter
+        final_contours_info.append((contour, vehicle_bboxes, score, region_thresholds))
 
     # -------------------------------------------------------------------
-    # 7) Draw results on a copy of the original frame
+    # 8) Draw results on a copy of the original frame
     # -------------------------------------------------------------------
     labeled_image_bgr = frame.copy()
     total_spaces = 0
     avg_width_space = 200
 
-    for i, (contour, vehicle_bboxes) in enumerate(final_contours_info):
-        # If there are NO vehicles nearby => spot is red
-        if len(vehicle_bboxes) == 0:
-            color = (0, 0, 255)  # BGR for red
+    for i, (contour, vehicle_bboxes, score, region_thresholds) in enumerate(final_contours_info):
+
+        # Optional: Decide color based on final score
+        if score >= 60:
+            color = (0, 255, 0)   # green
+        elif score >= 30:
+            color = (0, 255, 255) # yellow
         else:
-            # If there's at least one vehicle => random color
-            # (You can also do something stable, e.g., random.seed(i))
-            r = random.randint(50, 255)
-            g = random.randint(50, 255)
-            b = random.randint(50, 255)
-            color = (b, g, r)
+            color = (0, 0, 255)   # red
 
-        # Get bounding rect for the spot
+        # Draw bounding box for the spot
         x, y, w, h = cv2.boundingRect(contour)
-
         # Subdivide if extra wide
         if w > avg_width_space:
             num_spaces = int(w / avg_width_space)
@@ -190,24 +257,27 @@ def process_frame(frame, vehicle_mask, prob_map_path, thresholds):
             for j in range(num_spaces):
                 sx = int(x + j * space_width)
                 cv2.rectangle(labeled_image_bgr, (sx, y), (sx + int(space_width), y + h), color, 2)
-                cv2.putText(labeled_image_bgr, str(total_spaces + 1),
+
+                # Put text for ID or score or both
+                label = f"ID:{total_spaces + 1} Score:{int(score)}"
+                cv2.putText(labeled_image_bgr, label, 
                             (sx + int(space_width)//2, y + h//2),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                 total_spaces += 1
         else:
             # Single bounding box
             cv2.rectangle(labeled_image_bgr, (x, y), (x + w, y + h), color, 2)
-            cv2.putText(labeled_image_bgr, str(total_spaces + 1),
-                        (x + w//2, y + h//2),
+            label = f"ID:{total_spaces + 1} Score:{int(score)}"
+            cv2.putText(labeled_image_bgr, label, (x + w//2, y + h//2),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
             total_spaces += 1
 
-        # 8) Draw *all* vehicles for this spot in the same color
+        # 9) Also, if you want to highlight the vehicles in the same color
         for (vx, vy, vw, vh) in vehicle_bboxes:
             cv2.rectangle(labeled_image_bgr, (vx, vy), (vx + vw, vy + vh), color, 2)
 
     return labeled_image_bgr, total_spaces
-    
+
 # Function to load the regions from the pre-made regions.json file
 def load_regions_from_file(file_path='regions.json'):
     with open(file_path, 'r') as file:
