@@ -65,7 +65,7 @@
 
 | Feature Update | Description | Estimated Release |
 |------------------------------|----------------------------------------------------------------------------------|------------------|
-| **Upgrade to YOLOv12**  | Enhancing detection accuracy by integrating attention mechanisms into the model. | **April 2025** |
+| **Upgrade to YOLOv12**  | Enhancing detection accuracy by integrating attention mechanisms into the model. | **When Released** |
 | **Improved Detection Algorithm**  | Revamping parking space logic by referencing nearby cars for better spatial understanding. | **May 2025** |
 | **Automatic Parking Area Mapping** | Implementing a pipeline that autonomously builds a probability map and stops when achieving high accuracy. | **June 2025** |
 | **Automatic Region Division**  | Developing an algorithm that learns pixel descriptors to estimate valid car positions based on distance and angle. | **July 2025** |
@@ -86,13 +86,13 @@ For further details, contact me at [danielbob32@gmail.com](mailto:danielbob32@gm
 
 Finding parking spaces has become increasingly challenging in densely populated neighborhoods, where the **number of cars is growing rapidly**. This task not only frustrates drivers but also contributes to traffic congestion as unsuccessful searches add unnecessary delays to journeys. What if there was a solution that could streamline this process?
 
-Introducing ParkingSpace, a Python-based system leveraging YOLOv8 and real-time streaming protocol (RTSP) cameras to revolutionize parking spot detection. Developed as a project during my computer science degree, under the guidance of [Prof. Roi Poranne](https://github.com/Roipo), ParkingSpace aims to alleviate the parking woes encountered in urban areas.
+Introducing ParkingSpace, a Python-based system leveraging YOLOv11 and real-time streaming protocol (RTSP) cameras to revolutionize parking spot detection. Developed as a project during my computer science degree, under the guidance of [Prof. Roi Poranne](https://github.com/Roipo), ParkingSpace aims to alleviate the parking woes encountered in urban areas.
 
 The Challenge
 In bustling neighborhoods, the hunt for a vacant parking spot can be maddening. It not only consumes valuable time but also exacerbates traffic congestion as drivers circle blocks in search of elusive spaces. This frustration inspired the creation of ParkingSpace, a solution designed to make urban parking more efficient and less stressful.
 
 The Solution
-By harnessing the power of computer vision and YOLOv8, ParkingSpace identifies empty parking spaces in real-time, even within undefined parking areas. This innovative algorithm detects available spots, allowing drivers to make informed decisions about where to park without aimless circling. With ParkingSpace, navigating crowded streets becomes more manageable, reducing overcrowding the street and enhancing the overall urban driving experience on the way home or any other destination.
+By harnessing the power of computer vision and YOLOv11, ParkingSpace identifies empty parking spaces in real-time, even within undefined parking areas. This innovative algorithm detects available spots, allowing drivers to make informed decisions about where to park without aimless circling. With ParkingSpace, navigating crowded streets becomes more manageable, reducing overcrowding the street and enhancing the overall urban driving experience on the way home or any other destination.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -279,7 +279,7 @@ The data that has been used is kindly listed bellow.
 | [Raw Images](https://drive.google.com/drive/folders/19Vj134JEaQX1-8Ek_UGWvElroVuO2vXz?usp=sharing)       | Set of raw images snipped from the live videos.                                           |
 | [Augmented Images](https://drive.google.com/drive/folders/1gHNhspoRk9ewnf64yqftENCU64kqY5OP?usp=sharing) | Augmented data set of the images above to enrich the Probability map (save tracking time.) |
 | 🖌️ **Processed Data**                                                                                    |
-| [Segmented Images](https://drive.google.com/drive/folders/1Te31EDZKZ-XRcGjyaPD2qc1c4jH3Dpk9?usp=sharing) | YOLOv8 segmented images .                                                                 |
+| [Segmented Images](https://drive.google.com/drive/folders/1Te31EDZKZ-XRcGjyaPD2qc1c4jH3Dpk9?usp=sharing) | YOLOv11 segmented images .                                                                 |
 | [Binary Masks](https://drive.google.com/drive/folders/145pIsCr6CX0GDmDCKgXocOVQuMTDszI_?usp=sharing)     | Binary masks made out of the segmentation.                                                |
 | [Probability Map](https://drive.google.com/file/d/1fwNCc_sKEZyjcrchR3vL8WX9ULql6Wt2/view?usp=sharing)    | Grey-scale probability map constructed out of the binary masks.                            |
 
