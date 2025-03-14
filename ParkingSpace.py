@@ -6,6 +6,7 @@ import json
 from ultralytics import YOLO
 import time
 import torch
+import random
 
 # Set CUDA benchmarking for performance optimization
 torch.backends.cudnn.benchmark = True
@@ -21,58 +22,96 @@ def get_contour_center(contour):
         return (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
     return None
 
+def verify_nearby_vehicle(contour, vehicle_mask, aspect_ratio, 
+                          search_radius=50, aspect_ratio_tolerance=0.4):
+    """
+    Returns:
+        List of bounding boxes (x, y, w, h) for any 'similar' vehicles
+        near the given contour, or an empty list if none found.
+    """
+
+    x, y, w, h = cv2.boundingRect(contour)
+
+    # Define the search region around the contour
+    search_x1 = max(x - search_radius, 0)
+    search_y1 = max(y - search_radius, 0)
+    search_x2 = min(x + w + search_radius, vehicle_mask.shape[1])
+    search_y2 = min(y + h + search_radius, vehicle_mask.shape[0])
+
+    # Extract the region of interest from the vehicle mask
+    roi_vehicle_mask = vehicle_mask[search_y1:search_y2, search_x1:search_x2]
+
+    # Find vehicle contours in the search region
+    nearby_contours, _ = cv2.findContours(roi_vehicle_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    matching_vehicles = []
+    for nearby_contour in nearby_contours:
+        nx, ny, nw, nh = cv2.boundingRect(nearby_contour)
+
+        # Recompute bounding box in the coordinate space of the full image
+        full_x = search_x1 + nx
+        full_y = search_y1 + ny
+
+        # Calculate aspect ratio for the found vehicle
+        if nw != 0:
+            nearby_aspect_ratio = nh / float(nw)
+        else:
+            nearby_aspect_ratio = 0
+
+        # Check aspect ratio similarity
+        ratio_difference = abs(nearby_aspect_ratio - aspect_ratio)
+        if ratio_difference <= aspect_ratio_tolerance:
+            # Found a "similar" vehicle in the search region
+            matching_vehicles.append((full_x, full_y, nw, nh))
+
+    return matching_vehicles
+
+
 def process_frame(frame, vehicle_mask, prob_map_path, thresholds):
-    # Load the probability map
+    # 1) Load probability map
     prob_map = cv2.imread(prob_map_path, cv2.IMREAD_GRAYSCALE)
     if prob_map is None:
         raise Exception("Failed to load probability map")
 
-    # Resize the probability map to match the frame size 
+    # Resize probability map if needed
     if prob_map.shape != frame.shape[:2]:
         prob_map = cv2.resize(prob_map, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_NEAREST)
 
-    # Scale vehicle mask to 0-255
-    vehicle_mask_scaled = (vehicle_mask * 255).astype(np.uint8)  #  Vehicle regions are 255, rest are 0
+    # 2) Invert vehicle_mask to find empty parking regions
+    vehicle_mask_scaled = (vehicle_mask * 255).astype(np.uint8)
+    mask_img_inv = cv2.bitwise_not(vehicle_mask_scaled)
 
-    # Invert the vehicle mask to get potential empty spaces
-    mask_img_inv = cv2.bitwise_not(vehicle_mask_scaled)  # Empty spaces are 255, vehicles are 0
-
-    # Combine the probability map with the inverted mask
+    # 3) Combine probability map with inverted mask
     prob_map_combined = cv2.bitwise_and(prob_map, prob_map, mask=mask_img_inv)
-    #show the probability map
-    # cv2.imshow('Probability Map', prob_map_combined)
-    # cv2.waitKey(0)
-    # Apply thresholds to create a binary map
+
+    # 4) Binarize + morphological ops
     _, binary_map = cv2.threshold(prob_map_combined, 50, 255, cv2.THRESH_BINARY)
-    #show the binary map
-    # cv2.imshow('Binary Map', binary_map)
-    # cv2.waitKey(0)
-    # Define kernel size for morphological operations to separate close contours
     kernel_size = 5
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
-
-    # Perform erosion to separate contours that are very close together
     eroded_image = cv2.erode(binary_map, kernel, iterations=6)
-    #show the eroded image
-    # cv2.imshow('Eroded Image', eroded_image)
-    # cv2.waitKey(0)
-    # Now find contours on the eroded image
+
+    # 5) Find potential parking-space contours
     contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Define the regions for parking spaces
-    final_contours = []
+    # We'll collect: (contour, vehicle_bboxes_for_that_contour)
+    final_contours_info = []
+
     for contour in contours:
         center = get_contour_center(contour)
         if center is None:
             continue
 
-        # Skip contours in ignore regions
+        # Skip if in an ignore region
         if any(cv2.pointPolygonTest(region, center, False) >= 0 for region in ignore_regions):
             continue
 
+        # Basic geometry: area, solidity
         area = cv2.contourArea(contour)
+        hull = cv2.convexHull(contour)
+        hull_area = cv2.contourArea(hull)
+        solidity = area / hull_area if hull_area else 0
 
-        # Check which region the contour center point is in
+        # Determine region thresholds
         region_thresholds = None
         if cv2.pointPolygonTest(upper_level_l, center, False) >= 0:
             region_thresholds = thresholds['upper_level_l']
@@ -91,86 +130,84 @@ def process_frame(frame, vehicle_mask, prob_map_path, thresholds):
         elif cv2.pointPolygonTest(small_park, center, False) >= 0:
             region_thresholds = thresholds['small_park']
         else:
-            continue  # Skip if the contour is not in any region
-
-        # Calculate solidity
-        hull = cv2.convexHull(contour)
-        hull_area = cv2.contourArea(hull)
-        solidity = area / hull_area if hull_area > 0 else 0
-
-        # Apply thresholds based on the region
-        if area < region_thresholds['min_area'] or solidity < region_thresholds['min_solidity']:
+            # Not in a defined region
             continue
 
-        # Calculate bounding rect and aspect ratio
-        x, y, w, h = cv2.boundingRect(contour)
+        # Check area and solidity
+        if area < region_thresholds['min_area']:
+            continue
+        if solidity < region_thresholds['min_solidity']:
+            continue
 
-        # Check if contour dimensions are within the specified range for the region
+        # Bounding rect dimension check
+        x, y, w, h = cv2.boundingRect(contour)
         if not (region_thresholds['min_width'] <= w <= region_thresholds['max_width'] and
                 region_thresholds['min_height'] <= h <= region_thresholds['max_height']):
-            continue  # Skip contour if it doesn't meet size constraints
+            continue
 
-        # Calculate aspect ratio
-        aspect_ratio = max(w, h) / min(w, h) if min(w, h) > 0 else max(w, h)
-
+        # Aspect ratio check
+        aspect_ratio = max(w, h) / float(min(w, h) if min(w, h) else 1)
         if aspect_ratio > region_thresholds['max_aspect_ratio']:
-            continue  # Skip contour if it doesn't meet aspect ratio constraints
-        
-        # Calculate solidity
-        hull = cv2.convexHull(contour)
-        hull_area = cv2.contourArea(hull)
-        solidity = area / hull_area if hull_area > 0 else 0
+            continue
 
-        if solidity < region_thresholds['min_solidity']:
-            continue # Skip contour if it doesn't meet solidity constraints
+        # 6) Now find *all* vehicles near this contour
+        vehicle_bboxes = verify_nearby_vehicle(
+            contour, 
+            vehicle_mask_scaled, 
+            aspect_ratio, 
+            search_radius=50, 
+            aspect_ratio_tolerance=0.4
+        )
 
-        # If the contour passed all checks, it's a valid parking space
-        final_contours.append(contour)
+        final_contours_info.append((contour, vehicle_bboxes))
 
-    # Draw final contours on a new image
-    result_image = np.zeros_like(prob_map, dtype=np.uint8)
-    cv2.drawContours(result_image, final_contours, -1, (255), thickness=cv2.FILLED)
-
-    # Initialize the number of spaces to zero
+    # -------------------------------------------------------------------
+    # 7) Draw results on a copy of the original frame
+    # -------------------------------------------------------------------
+    labeled_image_bgr = frame.copy()
     total_spaces = 0
+    avg_width_space = 200
 
-    # Create a copy of the result_image for labeling
-    labeled_image_bgr = cv2.cvtColor(result_image, cv2.COLOR_GRAY2BGR)  # Convert to BGR for colored labels
+    for i, (contour, vehicle_bboxes) in enumerate(final_contours_info):
+        # If there are NO vehicles nearby => spot is red
+        if len(vehicle_bboxes) == 0:
+            color = (0, 0, 255)  # BGR for red
+        else:
+            # If there's at least one vehicle => random color
+            # (You can also do something stable, e.g., random.seed(i))
+            r = random.randint(50, 255)
+            g = random.randint(50, 255)
+            b = random.randint(50, 255)
+            color = (b, g, r)
 
-    # Define font scale and thickness for labels
-    font_scale = 0.5
-    font_thickness = 2
+        # Get bounding rect for the spot
+        x, y, w, h = cv2.boundingRect(contour)
 
-    # Define parking space size parameters
-    avg_width_space = 200  # Average width of a parking space that can be split
-
-    # Label each parking space
-    for contour in final_contours:
-        x, y, w, h = cv2.boundingRect(contour)  # Get the bounding rect for each contour
+        # Subdivide if extra wide
         if w > avg_width_space:
-            # Calculate the number of individual spaces within the wide contour
             num_spaces = int(w / avg_width_space)
             space_width = w / num_spaces
-
-            # Split the wide contour into individual spaces
             for j in range(num_spaces):
-                space_x = x + j * space_width
-                # Draw and label each divided space
-                cv2.rectangle(labeled_image_bgr, (int(space_x), y), (int(space_x + space_width), y + h), (0, 255, 0), 2)
-                label = f"{total_spaces + 1}"
-                cv2.putText(labeled_image_bgr, label, (int(space_x + space_width // 2), y + h // 2),
-                            cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), font_thickness)
-                total_spaces += 1  # Increment the space count for each split
+                sx = int(x + j * space_width)
+                cv2.rectangle(labeled_image_bgr, (sx, y), (sx + int(space_width), y + h), color, 2)
+                cv2.putText(labeled_image_bgr, str(total_spaces + 1),
+                            (sx + int(space_width)//2, y + h//2),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                total_spaces += 1
         else:
-            # Handle single parking space
-            cv2.rectangle(labeled_image_bgr, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            label = str(total_spaces + 1)
-            cv2.putText(labeled_image_bgr, label, (x + w // 2, y + h // 2),
-                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), font_thickness)
-            total_spaces += 1  # Increment the space count for single spaces
+            # Single bounding box
+            cv2.rectangle(labeled_image_bgr, (x, y), (x + w, y + h), color, 2)
+            cv2.putText(labeled_image_bgr, str(total_spaces + 1),
+                        (x + w//2, y + h//2),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            total_spaces += 1
 
-    return labeled_image_bgr, total_spaces  # Return the labeled image and the total number of spaces
+        # 8) Draw *all* vehicles for this spot in the same color
+        for (vx, vy, vw, vh) in vehicle_bboxes:
+            cv2.rectangle(labeled_image_bgr, (vx, vy), (vx + vw, vy + vh), color, 2)
 
+    return labeled_image_bgr, total_spaces
+    
 # Function to load the regions from the pre-made regions.json file
 def load_regions_from_file(file_path='regions.json'):
     with open(file_path, 'r') as file:
@@ -291,7 +328,7 @@ if not cap.isOpened():
     exit()
 
 # Set the interval in seconds
-interval = 1.0  # Process one frame every second
+interval = 3.0  # Process one frame every second
 
 # Initialize a variable to keep track of the last processed time
 last_time_processed = time.time() - interval
