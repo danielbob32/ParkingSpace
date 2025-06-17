@@ -254,6 +254,7 @@ class ParkingSpaceService:
         
         self.frame_count = 0
         self.last_time_processed = 0.0
+        self.last_processed_result = None  # Store last processing result
         
     def initialize(self) -> None:
         """Initialize all services"""
@@ -263,8 +264,7 @@ class ParkingSpaceService:
         self.model_service.load_model()
         self.region_service.load_regions()
         
-        # Initialize timing
-        self.last_time_processed = time.time() - self.config.processing.interval_seconds
+        # Initialize timing        self.last_time_processed = time.time() - self.config.processing.interval_seconds
         
         self.logger.info("System initialization complete")
     
@@ -278,17 +278,30 @@ class ParkingSpaceService:
                 if not ret:
                     self.logger.info("End of video reached")
                     break
-                
-                # Check if it's time to process frame
+                  # Check if it's time to process frame
                 current_time = time.time()
-                if current_time - self.last_time_processed >= self.config.processing.interval_seconds:
-                    self._process_single_frame(frame, current_time)
+                should_process = current_time - self.last_time_processed >= self.config.processing.interval_seconds
                 
-                # Check for quit key
-                if self.video_service.show_frame(frame):
-                    self.logger.info("User requested quit")
-                    break
+                display_frame = frame  # Default to original frame
+                
+                if should_process:
+                    # Process frame and get result
+                    quit_requested = self._process_single_frame(frame, current_time)
+                    if quit_requested:
+                        self.logger.info("User requested quit")
+                        break
+                    # Use the processed result if available
+                    if self.last_processed_result is not None:
+                        display_frame = self.last_processed_result.result_image
+                else:
+                    # Show previous processed result or original frame
+                    if self.last_processed_result is not None:
+                        display_frame = self.last_processed_result.result_image
                     
+                    # Check for quit key on current display
+                    if self.video_service.show_frame(display_frame):
+                        self.logger.info("User requested quit")
+                        break
         finally:
             self.video_service.release()
             self._log_final_report()
@@ -302,11 +315,13 @@ class ParkingSpaceService:
         try:
             # Detect vehicles
             detection_result = self.model_service.detect_vehicles(frame)
-            
-            # Process parking spaces
+              # Process parking spaces
             processing_result = self.processing_service.process_frame(
                 frame, detection_result.vehicle_mask
             )
+            
+            # Store the result for display in non-processing frames
+            self.last_processed_result = processing_result
             
             # Record performance metrics
             metrics = self.performance_monitor.end_frame_processing(detection_result.detection_time)
@@ -321,12 +336,13 @@ class ParkingSpaceService:
                     f"Vehicles detected: {detection_result.vehicle_count}"
                 )
             
-            # Show result
-            self.video_service.show_frame(processing_result.result_image)
+            # Show result (return True if quit key pressed)
+            return self.video_service.show_frame(processing_result.result_image)
             
         except Exception as e:
             self.logger.error(f"Error processing frame {self.frame_count}: {str(e)}")
             self.performance_monitor.end_frame_processing()  # End timing even on error
+            return False
     
     def _log_final_report(self) -> None:
         """Log final performance report"""
