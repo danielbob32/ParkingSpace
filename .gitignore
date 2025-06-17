@@ -35,6 +35,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.tox/
+tox.ini
 
 # IDE
 .vscode/
@@ -50,3 +52,4 @@ parking.jpg
 # OS
 .DS_Store
 Thumbs.db
+

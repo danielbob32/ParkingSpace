@@ -647,7 +647,7 @@ points = []
 
 # Define the event callback function
 def click_event(event, x, y, flags, param):
-    global points, image
+    global points
     if event == cv2.EVENT_LBUTTONDOWN:
         cv2.circle(image, (x, y), 5, (0, 255, 0), -1)
         points.append((x, y))
