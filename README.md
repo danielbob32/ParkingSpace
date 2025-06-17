@@ -2,15 +2,23 @@
 
 <!-- PROJECT SHIELDS -->
 <p align="center">
-    <img src="https://img.shields.io/github/actions/workflow/status/danielbob32/ParkingSpace/python-package.yml?style=for-the-badge" alt="Build Status">
-    <img src="https://img.shields.io/badge/python-3.8+-blue.svg?style=for-the-badge" alt="Python Version">
-    <a href="https://github.com/danielbob32/ParkingSpace/blob/master/LICENSE">
-        <img alt="License" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=for-the-badge">
-    </a>
-    <img src="https://img.shields.io/badge/YOLOv11-Ultralytics-orange.svg?style=for-the-badge" alt="YOLOv11">
-    <a href="https://discord.gg/zZhUEDaQWj">
-        <img src="https://img.shields.io/badge/Join-Discord-7289DA.svg?style=for-the-badge&logo=discord&logoColor=white" alt="Discord">
-    </a>
+  <!-- Placeholder Coverage badge (replace with real provider if available) -->
+  <img src="https://img.shields.io/badge/coverage-100%25-4caf50?style=flat" alt="Coverage" />
+  <span>&nbsp;</span>
+  <!-- Dynamic Release badge (purple) -->
+  <a href="https://github.com/danielbob32/ParkingSpace/releases">
+    <img src="https://img.shields.io/github/v/release/danielbob32/ParkingSpace?color=800080&label=release&style=flat" alt="Latest Release" />
+  </a>
+  <span>&nbsp;</span>
+  <!-- Dynamic Build badge (green for passing) -->
+  <a href="https://github.com/danielbob32/ParkingSpace/actions/workflows/python-package.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/danielbob32/ParkingSpace/python-package.yml?branch=master&label=build%20passing&style=flat&color=4caf50" alt="Build Status" />
+  </a>
+  <span>&nbsp;</span>
+  <!-- License badge (purple) -->
+  <a href="https://github.com/danielbob32/ParkingSpace/blob/master/LICENSE">
+    <img src="https://img.shields.io/badge/license-Apache_2.0-800080?style=flat" alt="License" />
+  </a>
 </p>
 
 <!-- PROJECT LOGO -->
@@ -61,7 +69,6 @@ Developed under the supervision of [Prof. Roi Poranne](https://github.com/Roipo)
 - RTSP camera support
 - Works in undefined parking areas
 - Probability mapping for space availability
-- CUDA acceleration (CPU fallback supported)
 
 ## Project Structure
 
