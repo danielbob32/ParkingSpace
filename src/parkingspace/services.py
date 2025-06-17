@@ -48,11 +48,11 @@ class ModelService:
         self._warmup_done = False
         
     def load_model(self) -> None:
-        """Load and initialize the YOLO model with optimizations"""
+        """Load and initialize the YOLO model with optimized synthetic pre-warming"""
         load_start = time.time()
         
         try:
-            self.logger.info(f"📥 Loading YOLO model: {self.config.model_path}")
+            self.logger.info(f"📥 Loading optimized YOLO model: {self.config.model_path}")
             
             # Load model
             self.model = YOLO(self.config.model_path)
@@ -61,11 +61,11 @@ class ModelService:
             # Apply optimizations
             self._apply_model_optimizations()
             
-            # Warm up model for better performance
-            self._warmup_model()
+            # Synthetic pre-warming (eliminates first detection bottleneck)
+            self._synthetic_prewarm()
             
             load_time = time.time() - load_start
-            self.logger.info(f"✅ YOLO model loaded and optimized in {load_time:.3f}s")
+            self.logger.info(f"✅ Optimized YOLO model ready in {load_time:.3f}s")
             
         except Exception as e:
             raise ModelLoadError(f"Failed to load YOLO model: {str(e)}")
@@ -150,6 +150,41 @@ class ModelService:
         except Exception as e:
             self.logger.warning(f"⚠️  Model warmup failed: {e}")
     
+    def _synthetic_prewarm(self):
+        """Synthetic pre-warming eliminates first detection bottleneck"""
+        if self._warmup_done:
+            return
+            
+        try:
+            self.logger.info("🚀 Synthetic pre-warming for instant detection...")
+            warmup_start = time.time()
+            
+            # Create synthetic frame with target dimensions (faster than real processing)
+            h, w = self.config.detection.image_size
+            synthetic_frame = np.random.randint(0, 255, (h, w, 3), dtype=np.uint8)
+            
+            # Run synthetic inference to warm up all model components
+            with torch.no_grad():
+                _ = self.model(
+                    synthetic_frame,
+                    conf=self.config.detection.confidence_threshold,
+                    classes=self.config.detection.classes,
+                    imgsz=self.config.detection.image_size,
+                    verbose=False,
+                    device=self.config.device
+                )
+            
+            # Clear GPU cache
+            if self.config.device == 'cuda':
+                torch.cuda.empty_cache()
+            
+            warmup_time = time.time() - warmup_start
+            self.logger.info(f"🚀 Synthetic pre-warming complete in {warmup_time:.3f}s")
+            self._warmup_done = True
+            
+        except Exception as e:
+            self.logger.warning(f"⚠️  Synthetic pre-warming failed: {e}")
+
     def detect_vehicles(self, frame: np.ndarray) -> DetectionResult:
         """Detect vehicles in the frame with optimizations"""
         if self.model is None:

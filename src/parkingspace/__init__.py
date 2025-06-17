@@ -15,13 +15,6 @@ from .capabilities import (
     CapabilityDetector,
     StartupOptimizer
 )
-from .fast_startup import (
-    get_fast_startup_manager,
-    LazyImporter,
-    ModelCache,
-    ParallelInitializer,
-    FastStartupManager
-)
 from .services import (
     ParkingSpaceService,
     ModelService,
@@ -32,36 +25,47 @@ from .services import (
     FrameProcessingResult
 )
 from .exceptions import (
-    ParkingSpaceError, 
-    ModelLoadError, 
-    RegionLoadError, 
-    ProcessingError, 
+    ParkingSpaceError,
+    ModelLoadError,
+    RegionLoadError,
+    ProcessingError,
     ConfigurationError
 )
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
+__author__ = "ParkingSpace Team"
+
 __all__ = [
+    # Main entry point
     "main",
-    "process_frame", 
+    
+    # Core functionality
+    "process_frame",
+    "get_contour_center",
+    
+    # Configuration
+    "get_config",
+    "Config",
+    
+    # Logging and monitoring
+    "setup_logging",
+    "get_logger", 
+    "get_performance_monitor",
+    
+    # Regions
     "load_regions_from_file",
     "save_regions_to_file",
     "get_thresholds",
-    "get_contour_center",
-    "get_config",
-    "Config",
-    "setup_logging",
-    "get_logger",
-    "get_performance_monitor",    "get_capability_detector",
+    
+    # Capabilities
+    "get_capability_detector",
     "get_startup_optimizer",
     "SystemCapabilities",
     "OptimizationProfile",
-    "CapabilityDetector",
+    "CapabilityDetector", 
     "StartupOptimizer",
-    "get_fast_startup_manager",
-    "LazyImporter",
-    "ModelCache",
-    "ParallelInitializer",
-    "FastStartupManager",
+    
+    # Services
     "ParkingSpaceService",
     "ModelService",
     "RegionService", 
@@ -69,9 +73,10 @@ __all__ = [
     "VideoService",
     "DetectionResult",
     "FrameProcessingResult",
+      # Exceptions
     "ParkingSpaceError",
     "ModelLoadError",
-    "RegionLoadError",
+    "RegionLoadError", 
     "ProcessingError",
-    "ConfigurationError"
+    "ConfigurationError",
 ]
