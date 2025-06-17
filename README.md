@@ -100,6 +100,57 @@ By harnessing the power of computer vision and YOLOv11, ParkingSpace identifies 
 
 # Getting Started
 
+## Quick Installation
+
+**Requirements**: Python 3.8+, 2.5GB free space
+
+### Option 1: Standard Installation (CPU)
+```bash
+# Clone the repository
+git clone https://github.com/danielbob32/ParkingSpace.git
+cd ParkingSpace
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install the package
+pip install -e .
+
+# Run the demo
+python -c "from src.parkingspace import main; main()"
+```
+
+### Option 2: GPU Acceleration (Recommended)
+For systems with NVIDIA GPUs and CUDA support:
+```bash
+# Clone the repository
+git clone https://github.com/danielbob32/ParkingSpace.git
+cd ParkingSpace
+
+# Install GPU dependencies
+pip install -r requirements-gpu.txt
+
+# Install the package
+pip install -e .
+
+# Run the demo
+python -c "from src.parkingspace import main; main()"
+```
+
+### Virtual Environment (Recommended)
+```bash
+# Create virtual environment
+python -m venv parkingspace-env
+
+# Activate (Windows)
+parkingspace-env\Scripts\activate
+
+# Activate (Linux/Mac)
+source parkingspace-env/bin/activate
+
+# Then follow Option 1 or 2 above
+```
+
 ## Install and Setup
 
 This will help you to get started with ParkingSpace if you want to run and experiment with the default street provided.

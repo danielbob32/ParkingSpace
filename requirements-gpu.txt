@@ -1,0 +1,15 @@
+# GPU-Accelerated Requirements for ParkingSpace Detection
+# Use this file for systems with NVIDIA GPUs and CUDA support
+# Install with: pip install -r requirements-gpu.txt
+
+# First install base requirements
+opencv-python>=4.8.0
+numpy>=1.24.0
+ultralytics>=8.0.0
+pytest>=7.0.0
+
+# GPU-accelerated PyTorch (CUDA 11.7)
+--extra-index-url https://download.pytorch.org/whl/cu117
+torch==1.13.1+cu117
+torchvision==0.14.1+cu117 
+torchaudio==0.13.1+cu117

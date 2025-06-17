@@ -16,10 +16,7 @@ def verify_nearby_vehicle(
     contour, vehicle_mask, aspect_ratio,
     search_radius=50, aspect_ratio_tolerance=0.4
 ):
-    """
-    Returns a list of bounding boxes (x, y, w, h) for any 'similar' vehicles
-    near the given contour, or an empty list if none found.
-    """
+    # Returns list of bounding boxes for similar vehicles near the given contour
     x, y, w, h = cv2.boundingRect(contour)
     search_x1 = max(x - search_radius, 0)
     search_y1 = max(y - search_radius, 0)
@@ -50,9 +47,7 @@ def compute_parking_space_score(
     area, width, height, aspect_ratio, solidity,
     vehicle_bboxes, region_thresholds
 ):
-    """
-    Compute a 'score' for a potential parking space, same logic you wrote before.
-    """
+    # Compute score for potential parking space
     score = 0.0
 
     ideal_area = (region_thresholds["min_area"] +

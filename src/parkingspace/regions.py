@@ -3,6 +3,27 @@
 import json
 import numpy as np
 
+def save_regions_to_file(
+    upper_level_l, upper_level_m, upper_level_r,
+    close_perp, far_side, close_side, far_perp, small_park,
+    ignore_regions, file_path='regions.json'
+):
+    # Save parking regions to JSON file
+    data = {
+        'upper_level_l': upper_level_l.tolist(),
+        'upper_level_m': upper_level_m.tolist(),
+        'upper_level_r': upper_level_r.tolist(),
+        'close_perp': close_perp.tolist(),
+        'far_side': far_side.tolist(),
+        'close_side': close_side.tolist(),
+        'far_perp': far_perp.tolist(),
+        'small_park': small_park.tolist(),
+        'ignore_regions': [region.tolist() for region in ignore_regions]
+    }
+    
+    with open(file_path, 'w') as file:
+        json.dump(data, file, indent=2)
+
 def load_regions_from_file(file_path='regions.json'):
     with open(file_path, 'r') as file:
         data = json.load(file)
