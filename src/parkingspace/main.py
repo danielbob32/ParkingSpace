@@ -2,49 +2,134 @@
 
 """
 Main application entry point for ParkingSpace Detection System.
-Uses service-oriented architecture for better separation of concerns.
+Uses service-oriented architecture with performance optimizations and fast startup.
 """
 
+import time
 from .config import get_config
 from .logger import setup_logging, get_logger
 from .services import ParkingSpaceService
 from .exceptions import ParkingSpaceError
+from .capabilities import get_capability_detector, get_startup_optimizer
+from .fast_startup import get_fast_startup_manager
 
 
-def main(config_file=None, video_file=None):
+def main(config_file=None, video_file=None, fast_mode=True):
     """
-    Main application entry point
+    Main application entry point with optional fast startup
     
     Args:
         config_file: Optional path to configuration file
         video_file: Optional path to video file to process
+        fast_mode: Enable fast startup optimizations (default: True)
     """
+    startup_start = time.time()
+    
     # Setup logging
     logger = setup_logging()
-    logger.info("Starting ParkingSpace Detection System")
+    logger.info("🚀 Starting ParkingSpace Detection System")
+    
+    if fast_mode:
+        # Use fast startup manager
+        fast_startup = get_fast_startup_manager()
+        fast_startup.optimize_imports()
+        
+        # Start parallel capability detection immediately
+        fast_startup.parallel_capability_detection()
     
     try:
         # Get configuration
-        config = get_config(config_file)
-        logger.info(f"Using device: {config.device}")
+        if fast_mode:
+            config = fast_startup.time_operation(
+                "Configuration Loading",
+                lambda: get_config(config_file)
+            )
+        else:
+            config = get_config(config_file)
         
-        # Initialize main service
+        # Get or wait for capability detection
+        if fast_mode:
+            capabilities = fast_startup.parallel_initializer.get_result("capability_detection")
+            if capabilities:
+                _apply_capability_optimizations(config, capabilities)
+                logger.info(f"⚡ Performance level: {capabilities.estimated_performance_level.upper()}")
+        else:
+            # Traditional capability detection
+            detector = get_capability_detector()
+            capabilities = detector.detect_system_capabilities()
+            _apply_capability_optimizations(config, capabilities)
+            logger.info(f"⚡ Performance level: {capabilities.estimated_performance_level.upper()}")
+        
+        # Optimize PyTorch settings early
+        if fast_mode and capabilities:
+            optimizer = get_startup_optimizer()
+            fast_startup.time_operation(
+                "PyTorch Optimization",
+                lambda: optimizer.optimize_torch_settings(capabilities)
+            )
+        
+        logger.info(f"🖥️  Using device: {config.device}")
+        
+        # Initialize main service with optimizations
         parking_service = ParkingSpaceService(config)
-        parking_service.initialize()
+        
+        if fast_mode:
+            # Use optimized initialization
+            fast_startup.time_operation(
+                "Service Initialization",
+                parking_service.initialize
+            )
+        else:
+            parking_service.initialize()
+        
+        # Log startup performance
+        startup_time = time.time() - startup_start
+        logger.info(f"✅ System ready in {startup_time:.3f}s")
+        
+        if fast_mode:
+            fast_startup.log_startup_summary()
         
         # Process video
+        logger.info("🎬 Starting video processing...")
         parking_service.process_video(video_file)
         
-        logger.info("ParkingSpace Detection System completed successfully")
+        logger.info("🎯 ParkingSpace Detection System completed successfully")
         
     except ParkingSpaceError as e:
-        logger.error(f"Application error: {str(e)}")
+        logger.error(f"❌ Application error: {str(e)}")
         raise
     except KeyboardInterrupt:
-        logger.info("Application interrupted by user")
+        logger.info("⏹️  Application interrupted by user")
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
+        logger.error(f"💥 Unexpected error: {str(e)}")
         raise
+
+
+def _apply_capability_optimizations(config, capabilities):
+    """Apply system capability-based optimizations to configuration"""
+    if not capabilities:
+        return
+        
+    recommendations = capabilities.recommended_settings
+    
+    # Apply device optimization
+    if recommendations.get("device") and hasattr(config, 'device'):
+        config.device = recommendations["device"]
+    
+    # Apply processing optimizations
+    if hasattr(config, 'processing'):
+        if recommendations.get("processing_interval"):
+            config.processing.interval_seconds = recommendations["processing_interval"]
+    
+    # Apply detection optimizations  
+    if hasattr(config, 'detection'):
+        if recommendations.get("image_size"):
+            config.detection.image_size = recommendations["image_size"]
+    
+    # Apply performance optimizations
+    if hasattr(config, 'performance'):
+        if recommendations.get("enable_cuda_benchmark") is not None:
+            config.performance.enable_cuda_benchmark = recommendations["enable_cuda_benchmark"]
 
 
 if __name__ == "__main__":

@@ -39,66 +39,163 @@ class FrameProcessingResult:
 
 
 class ModelService:
-    """Service for managing YOLO model operations"""
+    """Service for managing YOLO model operations with optimizations"""
     
     def __init__(self, config: Config):
         self.config = config
         self.logger = get_logger(__name__)
         self.model: Optional[YOLO] = None
+        self._warmup_done = False
         
     def load_model(self) -> None:
-        """Load and initialize the YOLO model"""
+        """Load and initialize the YOLO model with optimizations"""
+        load_start = time.time()
+        
         try:
+            self.logger.info(f"📥 Loading YOLO model: {self.config.model_path}")
+            
+            # Load model
             self.model = YOLO(self.config.model_path)
             self.model.to(self.config.device)
             
-            # Enable CUDA benchmarking if available
-            if self.config.device == 'cuda' and self.config.performance.enable_cuda_benchmark:
-                torch.backends.cudnn.benchmark = True
-                self.logger.info("CUDA benchmarking enabled")
-                
-            self.logger.info(f"YOLO model loaded: {self.config.model_path}")
+            # Apply optimizations
+            self._apply_model_optimizations()
+            
+            # Warm up model for better performance
+            self._warmup_model()
+            
+            load_time = time.time() - load_start
+            self.logger.info(f"✅ YOLO model loaded and optimized in {load_time:.3f}s")
             
         except Exception as e:
             raise ModelLoadError(f"Failed to load YOLO model: {str(e)}")
     
+    def load_model_fast(self, pre_loaded_model=None) -> None:
+        """Fast model loading with optional pre-loaded model"""
+        if pre_loaded_model:
+            self.logger.info("⚡ Using pre-loaded model")
+            self.model = pre_loaded_model
+            self._apply_model_optimizations()
+            # Skip warmup since model is already loaded
+            self._warmup_done = True
+            return
+        
+        # Fallback to normal loading
+        self.load_model()
+    
+    def preload_model_async(self):
+        """Preload model asynchronously for faster startup"""
+        import threading
+        
+        def load_async():
+            try:
+                self.logger.info("🚀 Pre-loading model in background...")
+                self.load_model()
+            except Exception as e:
+                self.logger.warning(f"⚠️  Background model loading failed: {e}")
+        
+        thread = threading.Thread(target=load_async)
+        thread.daemon = True
+        thread.start()
+        return thread
+    
+    def _apply_model_optimizations(self):
+        """Apply various optimizations to the model"""
+        if self.config.device == 'cuda':
+            # Enable CUDA optimizations
+            if self.config.performance.enable_cuda_benchmark:
+                torch.backends.cudnn.benchmark = True
+                self.logger.info("🚀 CUDA benchmarking enabled")
+            
+            # Try to use half precision if supported
+            try:
+                if hasattr(self.model.model, 'half'):
+                    self.model.model.half()
+                    self.logger.info("🔄 Half precision (FP16) enabled")
+            except Exception as e:
+                self.logger.warning(f"⚠️  Half precision failed: {e}")
+        
+        # Set model to evaluation mode for inference
+        if hasattr(self.model.model, 'eval'):
+            self.model.model.eval()
+    
+    def _warmup_model(self):
+        """Warm up the model with a dummy inference for better performance"""
+        if self._warmup_done:
+            return
+            
+        try:
+            self.logger.info("🔥 Warming up model...")
+            warmup_start = time.time()
+            
+            # Create dummy input matching expected input size
+            h, w = self.config.detection.image_size
+            dummy_input = torch.randn(1, 3, h, w, device=self.config.device)
+            
+            # Convert to numpy for YOLO (it expects numpy arrays)
+            dummy_array = (dummy_input.cpu().numpy().transpose(0, 2, 3, 1) * 255).astype(np.uint8)[0]
+            
+            # Run dummy inference
+            with torch.no_grad():
+                _ = self.model(dummy_array, verbose=False)
+            
+            # Clear GPU cache
+            if self.config.device == 'cuda':
+                torch.cuda.empty_cache()
+            
+            warmup_time = time.time() - warmup_start
+            self.logger.info(f"🔥 Model warmup completed in {warmup_time:.3f}s")
+            self._warmup_done = True
+            
+        except Exception as e:
+            self.logger.warning(f"⚠️  Model warmup failed: {e}")
+    
     def detect_vehicles(self, frame: np.ndarray) -> DetectionResult:
-        """Detect vehicles in the frame"""
+        """Detect vehicles in the frame with optimizations"""
         if self.model is None:
             raise ModelLoadError("Model not loaded. Call load_model() first.")
             
         detection_start = time.time()
         
-        # Run YOLO detection
+        # Run YOLO detection with optimized settings
         result = self.model(
             frame,
             conf=self.config.detection.confidence_threshold,
             classes=self.config.detection.classes,
-            imgsz=self.config.detection.image_size
+            imgsz=self.config.detection.image_size,
+            verbose=False,  # Reduce output verbosity
+            device=self.config.device
         )
         
         detection_time = time.time() - detection_start
         
-        # Process results
+        # Process results efficiently
         r = result[0]
         masks = r.masks
         class_ids = r.boxes.cls if r.boxes is not None else []
         
-        # Combine masks
-        vehicle_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+        # Pre-allocate mask for better performance
+        frame_h, frame_w = frame.shape[:2]
+        vehicle_mask = np.zeros((frame_h, frame_w), dtype=np.uint8)
         vehicle_count = 0
         
-        if masks is not None:
+        if masks is not None and len(masks.data) > 0:
+            # Process masks in batch for better performance
             for mask, cls in zip(masks.data, class_ids):
                 class_id = int(cls)
                 if class_id in self.config.detection.classes:
+                    # Convert mask efficiently
                     binary_mask = mask.cpu().numpy().astype(np.uint8)
-                    if binary_mask.shape != (frame.shape[0], frame.shape[1]):
+                    
+                    # Resize mask if needed
+                    if binary_mask.shape != (frame_h, frame_w):
                         binary_mask = cv2.resize(
                             binary_mask, 
-                            (frame.shape[1], frame.shape[0]),
+                            (frame_w, frame_h),
                             interpolation=cv2.INTER_NEAREST
                         )
+                    
+                    # Combine masks using bitwise OR for better performance
                     vehicle_mask = cv2.bitwise_or(vehicle_mask, binary_mask)
                     vehicle_count += 1
         

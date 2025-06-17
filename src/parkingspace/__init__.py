@@ -7,6 +7,21 @@ from .utils import get_contour_center
 from .config import get_config, Config
 from .logger import setup_logging, get_logger
 from .performance import get_performance_monitor
+from .capabilities import (
+    get_capability_detector,
+    get_startup_optimizer,
+    SystemCapabilities,
+    OptimizationProfile,
+    CapabilityDetector,
+    StartupOptimizer
+)
+from .fast_startup import (
+    get_fast_startup_manager,
+    LazyImporter,
+    ModelCache,
+    ParallelInitializer,
+    FastStartupManager
+)
 from .services import (
     ParkingSpaceService,
     ModelService,
@@ -36,7 +51,17 @@ __all__ = [
     "Config",
     "setup_logging",
     "get_logger",
-    "get_performance_monitor",
+    "get_performance_monitor",    "get_capability_detector",
+    "get_startup_optimizer",
+    "SystemCapabilities",
+    "OptimizationProfile",
+    "CapabilityDetector",
+    "StartupOptimizer",
+    "get_fast_startup_manager",
+    "LazyImporter",
+    "ModelCache",
+    "ParallelInitializer",
+    "FastStartupManager",
     "ParkingSpaceService",
     "ModelService",
     "RegionService", 

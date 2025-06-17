@@ -77,7 +77,7 @@ class PerformanceMonitor:
         
         Args:
             last_n: Number of recent frames to average
-            
+            what
         Returns:
             Average performance metrics or None if no data
         """
