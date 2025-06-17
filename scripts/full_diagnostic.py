@@ -72,13 +72,29 @@ def full_diagnostic():
             print("✓ Utils module import successful")
         except Exception as e:
             print(f"❌ Utils module import failed: {e}")
-        
-        # Test performance module
+          # Test performance module
         try:
             from src.parkingspace import performance
             print("✓ Performance module import successful")
         except Exception as e:
             print(f"❌ Performance module import failed: {e}")
+        
+        # Test services module
+        try:
+            from src.parkingspace import services
+            print("✓ Services module import successful")
+        except Exception as e:
+            print(f"❌ Services module import failed: {e}")
+        
+        # Test service classes
+        try:
+            from src.parkingspace.services import (
+                ParkingSpaceService, ModelService, RegionService,
+                ProcessingService, VideoService, DetectionResult, FrameProcessingResult
+            )
+            print("✓ Service classes import successful")
+        except Exception as e:
+            print(f"❌ Service classes import failed: {e}")
         
         print("\n✓ Full diagnostic complete")
         return True

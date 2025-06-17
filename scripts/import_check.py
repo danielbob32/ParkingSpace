@@ -43,6 +43,20 @@ def main():
         from src.parkingspace import exceptions
         print("✓ Exceptions module import successful")
         
+        from src.parkingspace import services
+        print("✓ Services module import successful")
+        
+        # Test service classes
+        from src.parkingspace import (
+            ParkingSpaceService, ModelService, RegionService, 
+            ProcessingService, VideoService
+        )
+        print("✓ Service classes import successful")
+        
+        # Test data classes
+        from src.parkingspace import DetectionResult, FrameProcessingResult
+        print("✓ Data classes import successful")
+        
         print("All imports successful - System ready for development")
         
     except ImportError as e:

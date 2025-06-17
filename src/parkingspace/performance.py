@@ -50,8 +50,13 @@ class PerformanceMonitor:
         try:
             import torch
             if torch.cuda.is_available():
-                gpu_memory = torch.cuda.memory_used() / torch.cuda.max_memory_reserved() * 100
-        except ImportError:
+                allocated = torch.cuda.memory_allocated()
+                reserved = torch.cuda.memory_reserved()
+                if reserved > 0:
+                    gpu_memory = allocated / reserved * 100
+                else:
+                    gpu_memory = 0.0
+        except (ImportError, AttributeError):
             pass
             
         metrics = PerformanceMetrics(
