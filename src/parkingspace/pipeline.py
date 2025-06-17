@@ -5,12 +5,7 @@ import numpy as np
 import random
 import time
 import torch
-
-def get_contour_center(contour):
-    M = cv2.moments(contour)
-    if M["m00"] != 0:
-        return (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-    return None
+from .utils import get_contour_center
 
 def verify_nearby_vehicle(
     contour, vehicle_mask, aspect_ratio,

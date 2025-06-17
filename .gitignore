@@ -26,6 +26,7 @@ MANIFEST
 PROJECT_MANAGEMENT.md
 CLEANUP_SUMMARY.md
 install.py
+*.prompt
 
 # Virtual environments
 .env
