@@ -9,7 +9,7 @@ description = "Comprehensive Parking Space Detection using YOLO."
 authors = [
   { name = "Daniel Bobritski", email = "[danielbob32@gmail.com]" }
 ]
-license = "Apache License Version 2.0"
+license = { text = "Apache-2.0" }
 readme = "README.md"
 requires-python = ">=3.8"
 
